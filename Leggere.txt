@@ -1,0 +1,4 @@
+Nella directory del progetto inserire:
+	-cartella "dataset" che conterrà al suo interno:
+		-una cartella "images" con tutte le immagini
+		-tre file csv (testing_list_blind, training_list, validation_list)
