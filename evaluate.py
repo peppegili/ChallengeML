@@ -59,9 +59,11 @@ def main(predicted_locations, target_locations):
     #print "Median Orientation Error: %0.4f" % (errors[3],)
 
     # save on txt file
-    with open("errors.txt", "w") as text_file:
-        text_file.write("Mean Location Error: {:.4f}\nMedian Location Error: {:.4f}\nMean Orientation Error: {:.4f}\nMedian Orientation Error: {:.4f}"
-                    .format(errors[0], errors[1], errors[2], errors[3]))
+    #with open("errors.txt", "w") as text_file:
+        #text_file.write("Mean Location Error: {:.4f}\nMedian Location Error: {:.4f}\nMean Orientation Error: {:.4f}\nMedian Orientation Error: {:.4f}"
+                    #.format(errors[0], errors[1], errors[2], errors[3]))
+
+    return errors
 
 #if __name__== "__main__":
     #main()
