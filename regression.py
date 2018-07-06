@@ -11,10 +11,11 @@ import csv
 from matplotlib import pyplot as plt
 from regression_models import *
 from dataset import Dataset
-from torchvision import transforms
+from torchvision import transforms, models
 from torch.utils.data import DataLoader
+from copy import deepcopy
 from sklearn import metrics
-from evaluate import main, evaluate_localization
+import evaluate
 
 
 
@@ -32,7 +33,7 @@ def train_regression(model, train_loader, test_loader, lr=0.00001, epochs=100, m
     # best_tot_loss = 0.0
 
     criterion = nn.MSELoss()  # Loss MSE per allenare il regressore
-    optimizer = SGD(model.parameters(), lr, momentum=momentum)  # ottimizzatore
+    optimizer = SGD(filter(lambda p: p.requires_grad, model.parameters()), lr, momentum=momentum)
 
     losses1 = {'train': [], 'test': []}  # dizionario che conterrà le liste delle loss di training e testing
     losses2 = {'train': [], 'test': []}
@@ -285,7 +286,7 @@ def rec_curve(predictions, gt):
 
 
 
-
+#---------------------------------- NEURAL NETWORKS -----------------------------------------
 
 def mlp():
 
@@ -421,7 +422,7 @@ def mlp():
 
 
     # Valutiamo adesso i risultati di regressione: usare il modulo "evaluate.py"
-    errors = main('predicted_pose_mlp', 'target_pose_mlp')
+    errors = evaluate.main('predicted_pose_mlp', 'target_pose_mlp')
     # save on txt file
     with open("mlp_errors.txt", "w") as text_file:
         text_file.write("Mean Location Error: {:.4f}\nMedian Location Error: {:.4f}\nMean Orientation Error: {:.4f}\nMedian Orientation Error: {:.4f}"
@@ -566,4 +567,352 @@ def deep_mlp():
 
 
     # Valutiamo adesso i risultati di regressione: usare il modulo "evaluate.py"
-    main('predicted_pose_deep_mlp', 'target_pose_deep_mlp')
+    errors = evaluate.main('predicted_pose_deep_mlp', 'target_pose_deep_mlp')
+    # save on txt file
+    with open("deep_mlp_errors.txt", "w") as text_file:
+        text_file.write("Mean Location Error: {:.4f}\nMedian Location Error: {:.4f}\nMean Orientation Error: {:.4f}\nMedian Orientation Error: {:.4f}"
+                        .format(errors[0], errors[1], errors[2], errors[3]))
+
+
+
+
+
+
+
+
+# architettura VGG16 con fine tuning del modulo "classifier"(i fully connected layers finali)
+def vgg16_fc():
+
+    #------MODEL-----
+    vgg16_orig = models.vgg16(pretrained=True)  # utilizziamo i pesi già allenati
+
+    # facciamo una copia del modello
+    vgg16 = deepcopy(vgg16_orig)
+    # vgg16 = vgg16.cuda()
+
+    for param in vgg16.features.parameters():
+        param.requires_grad = False  # freeze dei layer convoluzionali
+
+    features = list(vgg16.classifier.children())[1:-1]  # rimozione primo e ultimo layer
+
+    del features[2]  # rimozione quarto livello
+
+    features.insert(0, nn.Linear(16384, 3072))  # aggiungiamo il primo layer # img 144x256
+    features.insert(3, nn.Linear(3072, 3072))  # aggiungiamo il quarto layer
+    features.append(nn.Linear(3072, 4))  # aggiungiamo layer con 4 output (le 4 pose)
+
+    vgg16.classifier = nn.Sequential(*features)  # sostituiamo il modulo "classifier"
+    # print vgg16
+
+
+
+
+    # --------- DATALOADER AND TRANSFORMATION ----------
+
+    transform = transforms.Compose([transforms.ToTensor(),  # conversione in tensore
+                                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])  # normalizzazione con media e dvst di vgg16
+
+    # ridefiniamo il training set specificando le trasformazioni
+    train = Dataset('dataset/images', 'dataset/training_list.csv', transform=transform)
+
+    # permutiamo i dati di training
+    idx = np.random.permutation(len(train))
+    train.images = train.images[idx]
+
+    #print "Immagine di train:", train[0]['image'].shape  # 3x144x256
+    #print "Etichetta:", train[0]['label']
+    #print "Posa:", train[0]['pose']
+
+    #print ""
+
+    # ridefiniamo il test set specificando le trasformazioni
+    valid = Dataset('dataset/images', 'dataset/validation_list.csv', transform=transform)
+
+    # permutiamo i dati di validation
+    idx = np.random.permutation(len(valid))
+    valid.images = valid.images[idx]
+
+    #print "Immagine di validation:", valid[0]['image'].shape  # 3x144x256
+    #print "Etichetta:", valid[0]['label']
+    #print "Posa:", valid[0]['pose']
+
+    # definiamo i dataloaders
+    train_loader = DataLoader(train, batch_size=16, num_workers=2, shuffle=True)  # shuffle accede ai dati in maniera casuale
+    valid_loader = DataLoader(valid, batch_size=16, num_workers=2)
+
+
+
+
+    # -------- START TRAINING ----------
+
+    vgg16_fc_regressor, vgg16_fc_regressor_logs = train_regression(vgg16, train_loader, valid_loader, epochs=100)
+
+    # save the model
+    torch.save(vgg16_fc_regressor.state_dict(), 'vgg16_fc_regressor.pth')
+
+
+
+    # ----- PLOT LOGS--------
+
+    plot_logs_regression(vgg16_fc_regressor)
+
+    # save plot
+    plt.savefig('loss_vgg16_fc_regressor', format="jpg", bbox_inches='tight', pad_inches=0)
+
+
+
+    # ----- MSE --------
+
+    vgg16_fc_regressor_preds_gts = test_model_regression(vgg16_fc_regressor, valid_loader, "predicted_pose_vgg16_fc", "target_pose_vgg16_fc")
+
+    MSE1 = metrics.mean_squared_error(vgg16_fc_regressor_preds_gts[0][1], vgg16_fc_regressor_preds_gts[0][0])  # ..reali predette..
+    MSE2 = metrics.mean_squared_error(vgg16_fc_regressor_preds_gts[1][1], vgg16_fc_regressor_preds_gts[1][0])
+    MSE3 = metrics.mean_squared_error(vgg16_fc_regressor_preds_gts[2][1], vgg16_fc_regressor_preds_gts[2][0])
+    MSE4 = metrics.mean_squared_error(vgg16_fc_regressor_preds_gts[3][1], vgg16_fc_regressor_preds_gts[3][0])
+    #print"MSE pose X:", MSE1
+    #print"MSE pose Y:", MSE2
+    #print"MSE pose U:", MSE3
+    #print"MSE pose V:", MSE4
+
+    # save on txt file
+    with open("MSE_test_VGG16_FC_regressor.txt", "w") as text_file:
+        text_file.write(
+            "MSE1 VGG16 FC Regressor: {:.2f}\nMSE2 VGG16 FC Regressor: {:.2f}\nMSE3 VGG16 FC Regressor: {:.2f}\nMSE4 VGG16 FC Regressor: {:.2f}".format(MSE1, MSE2, MSE3, MSE4))
+
+
+
+    # ---- REC CURVE ----
+
+    # REC curve pose x
+    vgg16_fc_regressor_rec1 = rec_curve(vgg16_fc_regressor_preds_gts[0][0], vgg16_fc_regressor_preds_gts[0][1])
+    # REC curve pose y
+    vgg16_fc_regressor_rec2 = rec_curve(vgg16_fc_regressor_preds_gts[1][0], vgg16_fc_regressor_preds_gts[1][1])
+    # REC curve pose u
+    vgg16_fc_regressor_rec3 = rec_curve(vgg16_fc_regressor_preds_gts[2][0], vgg16_fc_regressor_preds_gts[2][1])
+    # REC curve pose v
+    vgg16_fc_regressor_rec4 = rec_curve(vgg16_fc_regressor_preds_gts[3][0], vgg16_fc_regressor_preds_gts[3][1])
+
+    plt.figure(figsize=(18, 10))
+    plt.subplot(221)
+    plt.title('REC Curve (x)')
+    plt.plot(vgg16_fc_regressor_rec1[0], vgg16_fc_regressor_rec1[1])
+    plt.legend(['VGG16 FC Regressor (x). AOC: %0.2f' % vgg16_fc_regressor_rec1[2]])
+    plt.grid()
+
+    plt.subplot(222)
+    plt.title('REC Curve (y)')
+    plt.plot(vgg16_fc_regressor_rec2[0], vgg16_fc_regressor_rec2[1])
+    plt.legend(['VGG16 FC Regressor (y). AOC: %0.2f' % vgg16_fc_regressor_rec2[2]])
+    plt.grid()
+
+    plt.subplot(223)
+    plt.title('REC Curve (u)')
+    plt.plot(vgg16_fc_regressor_rec3[0], vgg16_fc_regressor_rec3[1])
+    plt.legend(['VGG16 FC Regressor (u). AOC: %0.2f' % vgg16_fc_regressor_rec3[2]])
+    plt.grid()
+
+    plt.subplot(224)
+    plt.title('REC Curve (v)')
+    plt.plot(vgg16_fc_regressor_rec4[0], vgg16_fc_regressor_rec4[1])
+    plt.legend(['VGG16 FC Regressor (v). AOC: %0.2f' % vgg16_fc_regressor_rec4[2]])
+    plt.grid()
+
+    # plt.show()
+
+    # save plot
+    plt.savefig('REC_vgg16_fc_regressor', format="jpg", bbox_inches='tight', pad_inches=0)
+
+
+
+
+
+    # Valutiamo adesso i risultati di regressione: usare il modulo "evaluate.py"
+    errors = evaluate.main('predicted_pose_vgg16_fc', 'target_pose_vgg16_fc')
+    # save on txt file
+    with open("vgg16_fc_errors.txt", "w") as text_file:
+        text_file.write(
+            "Mean Location Error: {:.4f}\nMedian Location Error: {:.4f}\nMean Orientation Error: {:.4f}\nMedian Orientation Error: {:.4f}"
+            .format(errors[0], errors[1], errors[2], errors[3]))
+
+
+
+
+
+
+
+
+# architettura VGG16 con fine tuning del modulo "classifier"(i fully connected layers finali)
+# e dell'ultimo blocco convoluzionale del modulo "features"
+def vgg16_cl_fc():
+
+    # ------MODEL-----
+    vgg16_orig = models.vgg16(pretrained=True)  # utilizziamo i pesi già allenati
+
+    # facciamo una copia del modello
+    vgg16 = deepcopy(vgg16_orig)
+    # vgg16 = vgg16.cuda()
+
+    for param in vgg16.features.parameters():
+        param.requires_grad = False  # freeze dei layer convoluzionali
+
+    # sfreez dell'ultimo blocco convoluzionale(dal livello 24 al 30) del modulo "features"
+    layer = -1
+    for child in vgg16.features.children():
+        # print child
+        layer += 1
+        if layer > 23 and layer < 31:
+            #print"Sfreezato -> ", child
+            for param in child.parameters():
+                param.requires_grad = True
+
+    features = list(vgg16.classifier.children())[1:-1]  # rimozione primo e ultimo layer
+
+    del features[2]  # rimozione quarto livello
+
+    features.insert(0, nn.Linear(16384, 3072))  # aggiungiamo il primo layer # img 144x256
+    features.insert(3, nn.Linear(3072, 3072))  # aggiungiamo il quarto layer
+    features.append(nn.Linear(3072, 4))  # aggiungiamo layer con 4 output (le 4 pose)
+
+    vgg16.classifier = nn.Sequential(*features)  # sostituiamo il modulo "classifier"
+    # print vgg16
+
+
+
+    # --------- DATALOADER AND TRANSFORMATION ----------
+
+    transform = transforms.Compose([transforms.ToTensor(),  # conversione in tensore
+                                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])  # normalizzazione con media e dvst di vgg16
+
+    # ridefiniamo il training set specificando le trasformazioni
+    train = Dataset('dataset/images', 'dataset/training_list.csv', transform=transform)
+
+    # permutiamo i dati di training
+    idx = np.random.permutation(len(train))
+    train.images = train.images[idx]
+
+    # print "Immagine di train:", train[0]['image'].shape # 3x144x256
+    # print "Etichetta:", train[0]['label']
+    # print "Posa:", train[0]['pose']
+
+    # print ""
+
+    # ridefiniamo il test set specificando le trasformazioni
+    valid = Dataset('dataset/images', 'dataset/validation_list.csv', transform=transform)
+
+    # permutiamo i dati di validation
+    idx = np.random.permutation(len(valid))
+    valid.images = valid.images[idx]
+
+    # print "Immagine di validation:", valid[0]['image'].shape # 3x144x256
+    # print "Etichetta:", valid[0]['label']
+    # print "Posa:", valid[0]['pose']
+
+    # definiamo i dataloaders
+    train_loader = DataLoader(train, batch_size=16, num_workers=2, shuffle=True)  # shuffle accede ai dati in maniera casuale
+    valid_loader = DataLoader(valid, batch_size=16, num_workers=2)
+
+
+
+
+    # -------- START TRAINING ----------
+
+    vgg16_cl_fc_regressor, vgg16_cl_fc_regressor_logs = train_regression(vgg16, train_loader, valid_loader, epochs=100)
+
+    # save the model
+    torch.save(vgg16_cl_fc_regressor.state_dict(), 'vgg16_cl_fc_regressor.pth')
+
+
+
+    # ----- PLOT LOGS--------
+
+    plot_logs_regression(vgg16_cl_fc_regressor)
+
+    # save plot
+    plt.savefig('loss_vgg16_cl_fc_regressor', format="jpg", bbox_inches='tight', pad_inches=0)
+
+
+
+    # ----- MSE --------
+
+    vgg16_cl_fc_regressor_preds_gts = test_model_regression(vgg16_cl_fc_regressor, valid_loader, "predicted_pose_vgg16_cl_fc", "target_pose_vgg16_cl_fc")
+
+    MSE1 = metrics.mean_squared_error(vgg16_cl_fc_regressor_preds_gts[0][1], vgg16_cl_fc_regressor_preds_gts[0][0])  # ..reali predette..
+    MSE2 = metrics.mean_squared_error(vgg16_cl_fc_regressor_preds_gts[1][1], vgg16_cl_fc_regressor_preds_gts[1][0])
+    MSE3 = metrics.mean_squared_error(vgg16_cl_fc_regressor_preds_gts[2][1], vgg16_cl_fc_regressor_preds_gts[2][0])
+    MSE4 = metrics.mean_squared_error(vgg16_cl_fc_regressor_preds_gts[3][1], vgg16_cl_fc_regressor_preds_gts[3][0])
+    #print"MSE pose X:", MSE1
+    #print"MSE pose Y:", MSE2
+    #print"MSE pose U:", MSE3
+    #print"MSE pose V:", MSE4
+
+    # save on txt file
+    with open("MSE_test_VGG16_CL_FC_regressor.txt", "w") as text_file:
+        text_file.write("MSE1 VGG16 CL FC Regressor: {:.2f}\nMSE2 VGG16 CL FC Regressor: {:.2f}\nMSE3 VGG16 CL FC Regressor: {:.2f}\nMSE4 VGG16 CL FC Regressor: {:.2f}"
+            .format(MSE1, MSE2, MSE3, MSE4))
+
+
+
+
+
+    # ---- REC CURVE ----
+
+    # REC curve pose x
+    vgg16_cl_fc_regressor_rec1 = rec_curve(vgg16_cl_fc_regressor_preds_gts[0][0], vgg16_cl_fc_regressor_preds_gts[0][1])
+    # REC curve pose y
+    vgg16_cl_fc_regressor_rec2 = rec_curve(vgg16_cl_fc_regressor_preds_gts[1][0], vgg16_cl_fc_regressor_preds_gts[1][1])
+    # REC curve pose u
+    vgg16_cl_fc_regressor_rec3 = rec_curve(vgg16_cl_fc_regressor_preds_gts[2][0], vgg16_cl_fc_regressor_preds_gts[2][1])
+    # REC curve pose v
+    vgg16_cl_fc_regressor_rec4 = rec_curve(vgg16_cl_fc_regressor_preds_gts[3][0], vgg16_cl_fc_regressor_preds_gts[3][1])
+
+    plt.figure(figsize=(18, 10))
+    plt.subplot(221)
+    plt.title('REC Curve (x)')
+    plt.plot(vgg16_cl_fc_regressor_rec1[0], vgg16_cl_fc_regressor_rec1[1])
+    plt.legend(['VGG16 CL FC Regressor (x). AOC: %0.2f' % vgg16_cl_fc_regressor_rec1[2]])
+    plt.grid()
+
+    plt.subplot(222)
+    plt.title('REC Curve (y)')
+    plt.plot(vgg16_cl_fc_regressor_rec2[0], vgg16_cl_fc_regressor_rec2[1])
+    plt.legend(['VGG16 CL FC Regressor (y). AOC: %0.2f' % vgg16_cl_fc_regressor_rec2[2]])
+    plt.grid()
+
+    plt.subplot(223)
+    plt.title('REC Curve (u)')
+    plt.plot(vgg16_cl_fc_regressor_rec3[0], vgg16_cl_fc_regressor_rec3[1])
+    plt.legend(['VGG16 CL FC Regressor (u). AOC: %0.2f' % vgg16_cl_fc_regressor_rec3[2]])
+    plt.grid()
+
+    plt.subplot(224)
+    plt.title('REC Curve (v)')
+    plt.plot(vgg16_cl_fc_regressor_rec4[0], vgg16_cl_fc_regressor_rec4[1])
+    plt.legend(['VGG16 CL FC Regressor (v). AOC: %0.2f' % vgg16_cl_fc_regressor_rec4[2]])
+    plt.grid()
+
+    # plt.show()
+
+    # save plot
+    plt.savefig('REC_vgg16_cl_fc_regressor', format="jpg", bbox_inches='tight', pad_inches=0)
+
+
+
+
+
+    # Valutiamo adesso i risultati di regressione: usare il modulo "evaluate.py"
+
+    errors = evaluate.main('predicted_pose_vgg16_cl_c', 'target_pose_vgg16_cl_fc')
+    # save on txt file
+    with open("vgg16_cl_fc_errors.txt", "w") as text_file:
+        text_file.write("Mean Location Error: {:.4f}\nMedian Location Error: {:.4f}\nMean Orientation Error: {:.4f}\nMedian Orientation Error: {:.4f}"
+                .format(errors[0], errors[1], errors[2], errors[3]))
+
+
+
+
+
+
+#--------------------------------------------------------------------
+
+
+
