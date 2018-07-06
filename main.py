@@ -4,8 +4,8 @@
 
 import numpy as np
 import torch
-from classification_mlp import mlp
-from classification_deep_mlp import deep_mlp
+import regression
+import classification
 
 
 
@@ -19,8 +19,25 @@ torch.random.manual_seed(1234)
 
 
 #-------------  MLP CLASSIFICATION -------------
-#mlp()
+#classification.mlp()
 
 
 #------------- DEEP MLP CLASSIFICATION -------------
-#deep_mlp()
+#classification.deep_mlp()
+
+
+
+
+
+
+
+
+
+
+
+#-------------  MLP REGRESSION -------------
+#regression.mlp()
+
+
+#------------- DEEP MLP REGRESSION -------------
+#regression.deep_mlp()
