@@ -12,10 +12,11 @@ import numpy as np
 import itertools
 from sklearn.metrics import f1_score
 from sklearn.metrics import confusion_matrix
-from torchvision import transforms
 from torch.utils.data import DataLoader
 from dataset import Dataset
 from classification_models import *
+from torchvision import models, transforms
+from copy import deepcopy
 
 
 
@@ -539,6 +540,334 @@ def deep_mlp():
                                                 scores[5], scores[6], scores[7], scores[8], scores[9],
                                                 scores[10], scores[11], scores[12], scores[13], scores[14],
                                                 scores[15], scores.mean()))
+
+
+
+
+
+
+
+
+
+
+# architettura VGG16 con fine tuning del modulo "classifier"(i fully connected layers finali)
+def vgg16_fc():
+
+    #-------MODEL--------
+    vgg16_orig = models.vgg16(pretrained=True)  # utilizziamo i pesi già allenati
+
+    # facciamo una copia del modello
+    vgg16 = deepcopy(vgg16_orig)
+    # vgg16 = vgg16.cuda()
+
+    for param in vgg16.features.parameters():
+        param.requires_grad = False  # freeze dei layer convoluzionali
+
+
+    features = list(vgg16.classifier.children())[1:-1]  # rimozione primo e ultimo layer
+
+    del features[2]  # rimozione quarto livello
+
+    features.insert(0, nn.Linear(16384, 3072))  # aggiungiamo il primo layer # img 144x256
+    features.insert(3, nn.Linear(3072, 3072))  # aggiungiamo il quarto layer
+    features.append(nn.Linear(3072, 16))  # aggiungiamo layer con 16 output
+
+    vgg16.classifier = nn.Sequential(*features)  # sostituiamo il modulo "classifier"
+
+    #print vgg16
+
+
+
+
+    # --------- DATALOADER AND TRANSFORMATION ----------
+
+    transform = transforms.Compose([transforms.ToTensor(),  # conversione in tensore
+                                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])  # normalizzazione con media e dvst di vgg16
+
+    # ridefiniamo il training set specificando le trasformazioni
+    train = Dataset('dataset/images', 'dataset/training_list.csv', transform=transform)
+
+    # permutiamo i dati di training
+    idx = np.random.permutation(len(train))
+    train.images = train.images[idx]
+
+    # print "Immagine di train:", train[0]['image'].shape # 3x144x256
+    # print "Etichetta:", train[0]['label']
+    # print "Posa:", train[0]['pose']
+
+    # print ""
+
+    # ridefiniamo il test set specificando le trasformazioni
+    valid = Dataset('dataset/images', 'dataset/validation_list.csv', transform=transform)
+
+    # permutiamo i dati di validation
+    idx = np.random.permutation(len(valid))
+    valid.images = valid.images[idx]
+
+    # print "Immagine di validation:", valid[0]['image'].shape # 3x144x256
+    # print "Etichetta:", valid[0]['label']
+    # print "Posa:", valid[0]['pose']
+
+    # definiamo i dataloaders
+    train_loader = DataLoader(train, batch_size=16, num_workers=2, shuffle=True)  # shuffle accede ai dati in maniera casuale
+    valid_loader = DataLoader(valid, batch_size=16, num_workers=2)
+
+
+
+    #-------- START TRAINING ----------
+
+    vgg16_fc_classifier, vgg16_fc_classifier_logs = train_classification(vgg16, train_loader, valid_loader, epochs=100)
+
+    # save the model
+    torch.save(vgg16_fc_classifier.state_dict(), 'vgg16_fc_classifier.pth')
+
+
+
+
+    # ----- PLOT LOGS--------
+
+    plot_logs_classification(vgg16_fc_classifier)
+
+    # save plot
+    plt.savefig('loss_vgg16_fc_classifier', format="jpg", bbox_inches='tight', pad_inches=0)
+
+
+
+
+    # ----- ACCURACY --------
+
+    vgg16_fc_classifier_predictions, vgg16_fc_classifier_gt = test_model_classification(vgg16_fc_classifier, valid_loader)
+
+    # print "Accuracy VGG16 FC Classifier: %0.2f" % \
+        # accuracy_score(vgg16_fc_classifier_gt,vgg16_fc_classifier_predictions.argmax(1))
+
+    # save on txt file
+    with open("acc_test_vgg16_fc_classifier.txt", "w") as text_file:
+        text_file.write("Accuracy VGG16 FC Classifier: {:.2f}".format(accuracy_score(vgg16_fc_classifier_gt, vgg16_fc_classifier_predictions.argmax(1))))
+
+
+
+
+    # ---- CONFUSION MATRIX ----
+
+    conf_matrix_vgg16_fc = confusion_matrix(vgg16_fc_classifier_gt, vgg16_fc_classifier_predictions.argmax(1))
+    class_names = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+    # Plot non-normalized confusion matrix
+    plt.figure(figsize=(20, 20))
+    plt.subplot(211)
+    plot_confusion_matrix(conf_matrix_vgg16_fc, classes=class_names,
+                          title='Confusion matrix VGG16 FC fine-tuning')
+
+    # Plot normalized confusion matrix
+    plt.subplot(212)
+    plot_confusion_matrix(conf_matrix_vgg16_fc, classes=class_names, normalize=True,
+                          title='Normalized Confusion Matrix VGG16 FC fine-tuning')
+
+    # plot.show()
+
+    # save plot
+    plt.savefig('conf_matrix_vgg16_fc_classifier', format="jpg", bbox_inches='tight', pad_inches=0)
+
+
+
+
+
+    # ---- SCORE F1 AND mF1----
+
+    scores_vgg16_fc = f1_score(vgg16_fc_classifier_gt, vgg16_fc_classifier_predictions.argmax(1), average=None)
+    # print "Score F1 VGG16 FC:", scores_vgg16_fc
+
+    # print "Score mF1 VGG16 FC:", scores_vgg16_fc.mean() #mF1
+
+    # save on txt file
+    with open("score_F1_mF1_vgg16_fc_classifier.txt", "w") as text_file:
+        text_file.write("Score F1 Classe0 VGG16 FC Classifier: {:.2f}\nScore F1 Classe1 VGG16 FC Classifier: {:.2f}\
+        \nScore F1 Classe2 VGG16 FC Classifier: {:.2f}\nScore F1 Classe3 VGG16 FC Classifier: {:.2f}\
+        \nScore F1 Classe4 VGG16 FC Classifier: {:.2f}\nScore F1 Classe5 VGG16 FC Classifier: {:.2f}\
+        \nScore F1 Classe6 VGG16 FC Classifier: {:.2f}\nScore F1 Classe7 VGG16 FC Classifier: {:.2f}\
+        \nScore F1 Classe8 VGG16 FC Classifier: {:.2f}\nScore F1 Classe9 VGG16 FC Classifier: {:.2f}\
+        \nScore F1 Classe10 VGG16 FC Classifier: {:.2f}\nScore F1 Classe11 VGG16 FC Classifier: {:.2f}\
+        \nScore F1 Classe12 VGG16 FC Classifier: {:.2f}\nScore F1 Classe13 VGG16 FC Classifier: {:.2f}\
+        \nScore F1 Classe14 VGG16 FC Classifier: {:.2f}\nScore F1 Classe15 VGG16 FC Classifier: {:.2f}\
+        \nScore mF1 VGG16 FC Classifier: {:.2f}".format(scores_vgg16_fc[0], scores_vgg16_fc[1], scores_vgg16_fc[2],
+                                                        scores_vgg16_fc[3], scores_vgg16_fc[4],
+                                                        scores_vgg16_fc[5], scores_vgg16_fc[6], scores_vgg16_fc[7],
+                                                        scores_vgg16_fc[8], scores_vgg16_fc[9],
+                                                        scores_vgg16_fc[10], scores_vgg16_fc[11], scores_vgg16_fc[12],
+                                                        scores_vgg16_fc[13], scores_vgg16_fc[14],
+                                                        scores_vgg16_fc[15], scores_vgg16_fc.mean()))
+
+
+
+
+
+# architettura VGG16 con fine tuning del modulo "classifier"(i fully connected layers finali)
+# e dell'ultimo blocco convoluzionale del modulo "features"
+def vgg16_cl_fc():
+
+    #----MODEL-----
+    vgg16_orig = models.vgg16(pretrained=True)  # utilizziamo i pesi già allenati
+
+    # facciamo una copia del modello
+    vgg16 = deepcopy(vgg16_orig)
+    # vgg16 = vgg16.cuda()
+
+    for param in vgg16.features.parameters():
+        param.requires_grad = False  # freeze dei layer convoluzionali
+
+    #vgg16_trainable_parameters = filter(lambda p: p.requires_grad, vgg16.parameters())
+    #print "Numero di parametri trainabili vgg16: ", sum([p.numel() for p in vgg16_trainable_parameters])
+
+    # sfreez dell'ultimo blocco convoluzionale(dal livello 24 al 30) del modulo "features"
+    layer = -1
+    for child in vgg16.features.children():
+        # print child
+        layer += 1
+        if layer > 23 and layer < 31:
+            #print"Sfreezato -> ", child
+            for param in child.parameters():
+                param.requires_grad = True
+
+    #vgg16_trainable_parameters = filter(lambda p: p.requires_grad, vgg16.parameters())
+    #print "Numero di parametri trainabili vgg16: ", sum([p.numel() for p in vgg16_trainable_parameters])
+
+    features = list(vgg16.classifier.children())[1:-1]  # rimozione primo e ultimo layer
+
+    del features[2]  # rimozione quarto livello
+
+    features.insert(0, nn.Linear(16384, 3072))  # aggiungiamo il primo layer # img 144x256
+    features.insert(3, nn.Linear(3072, 3072))  # aggiungiamo il quarto layer
+    features.append(nn.Linear(3072, 16))  # aggiungiamo layer con 16 output
+
+    vgg16.classifier = nn.Sequential(*features)  # sostituiamo il modulo "classifier"
+
+    #print vgg16
+
+
+
+
+    # --------- DATALOADER AND TRANSFORMATION ----------
+
+    transform = transforms.Compose([transforms.ToTensor(),  # conversione in tensore
+                                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])  # normalizzazione con media e dvst di vgg16
+
+    # ridefiniamo il training set specificando le trasformazioni
+    train = Dataset('dataset/images', 'dataset/training_list.csv', transform=transform)
+
+    # permutiamo i dati di training
+    idx = np.random.permutation(len(train))
+    train.images = train.images[idx]
+
+    # print "Immagine di train:", train[0]['image'].shape # 3x144x256
+    # print "Etichetta:", train[0]['label']
+    # print "Posa:", train[0]['pose']
+
+    # print ""
+
+    # ridefiniamo il test set specificando le trasformazioni
+    valid = Dataset('dataset/images', 'dataset/validation_list.csv', transform=transform)
+
+    # permutiamo i dati di validation
+    idx = np.random.permutation(len(valid))
+    valid.images = valid.images[idx]
+
+    # print "Immagine di validation:", valid[0]['image'].shape # 3x144x256
+    # print "Etichetta:", valid[0]['label']
+    # print "Posa:", valid[0]['pose']
+
+    # definiamo i dataloaders
+    train_loader = DataLoader(train, batch_size=16, num_workers=2, shuffle=True)  # shuffle accede ai dati in maniera casuale
+    valid_loader = DataLoader(valid, batch_size=16, num_workers=2)
+
+
+
+    # -------- START TRAINING ----------
+
+    vgg16_cl_fc_classifier, vgg16_cl_fc_classifier_logs = train_classification(vgg16, train_loader, valid_loader, epochs=100)
+
+    # save the model
+    torch.save(vgg16_cl_fc_classifier.state_dict(), 'vgg16_cl_fc_classifier.pth')
+
+
+
+    # ----- PLOT LOGS--------
+
+    plot_logs_classification(vgg16_cl_fc_classifier)
+
+    # save plot
+    plt.savefig('loss_vgg16_cl_fc_classifier', format="jpg", bbox_inches='tight', pad_inches=0)
+
+
+
+    # ----- ACCURACY --------
+
+    vgg16_cl_fc_classifier_predictions, vgg16_cl_fc_classifier_gt = test_model_classification(vgg16_cl_fc_classifier, valid_loader)
+
+    # print "Accuracy VGG16 CL FC Classifier: %0.2f" % \
+        # accuracy_score(vgg16_cl_fc_classifier_gt,vgg16_cl_fc_classifier_predictions.argmax(1))
+
+    # save on txt file
+    with open("acc_test_vgg16_cl_fc_classifier.txt", "w") as text_file:
+        text_file.write("Accuracy VGG16 CL FC Classifier: {:.2f}".format(accuracy_score(vgg16_cl_fc_classifier_gt, vgg16_cl_fc_classifier_predictions.argmax(1))))
+
+
+
+
+    # ---- CONFUSION MATRIX ----
+
+    conf_matrix_vgg16_cl_fc = confusion_matrix(vgg16_cl_fc_classifier_gt, vgg16_cl_fc_classifier_predictions.argmax(1))
+    class_names = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+    # Plot non-normalized confusion matrix
+    plt.figure(figsize=(20, 20))
+    plt.subplot(211)
+    plot_confusion_matrix(conf_matrix_vgg16_cl_fc, classes=class_names,
+                          title='Confusion matrix VGG16 CL FC fine-tuning')
+
+    # Plot normalized confusion matrix
+    plt.subplot(212)
+    plot_confusion_matrix(conf_matrix_vgg16_cl_fc, classes=class_names, normalize=True,
+                          title='Normalized Confusion Matrix VGG16 CL FC fine-tuning')
+
+    # plot.show()
+
+    # save plot
+    plt.savefig('conf_matrix_vgg16_cl_fc_classifier', format="jpg", bbox_inches='tight', pad_inches=0)
+
+
+
+    # ---- SCORE F1 AND mF1----
+
+    scores_vgg16_cl_fc = f1_score(vgg16_cl_fc_classifier_gt, vgg16_cl_fc_classifier_predictions.argmax(1), average=None)
+    #print "Score F1 VGG16 CL FC:", scores_vgg16_cl_fc
+
+    #print "Score mF1 VGG16 CL FC:", scores_vgg16_cl_fc.mean()  # mF1
+
+    # save on txt file
+    with open("score_F1_mF1_vgg16_cl_fc_classifier.txt", "w") as text_file:
+        text_file.write("Score F1 Classe0 VGG16 CL FC Classifier: {:.2f}\nScore F1 Classe1 VGG16 CL FC Classifier: {:.2f}\
+        \nScore F1 Classe2 VGG16 CL FC Classifier: {:.2f}\nScore F1 Classe3 VGG16 CL FC Classifier: {:.2f}\
+        \nScore F1 Classe4 VGG16 CL FC Classifier: {:.2f}\nScore F1 Classe5 VGG16 CL FC Classifier: {:.2f}\
+        \nScore F1 Classe6 VGG16 CL FC Classifier: {:.2f}\nScore F1 Classe7 VGG16 CL FC Classifier: {:.2f}\
+        \nScore F1 Classe8 VGG16 CL FC Classifier: {:.2f}\nScore F1 Classe9 VGG16 CL FC Classifier: {:.2f}\
+        \nScore F1 Classe10 VGG16 CL FC Classifier: {:.2f}\nScore F1 Classe11 VGG16 CL FC Classifier: {:.2f}\
+        \nScore F1 Classe12 VGG16 CL FC Classifier: {:.2f}\nScore F1 Classe13 VGG16 CL FC Classifier: {:.2f}\
+        \nScore F1 Classe14 VGG16 CL FC Classifier: {:.2f}\nScore F1 Classe15 VGG16 CL FC Classifier: {:.2f}\
+        \nScore mF1 VGG16 CL FC Classifier: {:.2f}".format(scores_vgg16_cl_fc[0], scores_vgg16_cl_fc[1],
+                                                           scores_vgg16_cl_fc[2], scores_vgg16_cl_fc[3],
+                                                           scores_vgg16_cl_fc[4], scores_vgg16_cl_fc[5],
+                                                           scores_vgg16_cl_fc[6], scores_vgg16_cl_fc[7],
+                                                           scores_vgg16_cl_fc[8], scores_vgg16_cl_fc[9],
+                                                           scores_vgg16_cl_fc[10], scores_vgg16_cl_fc[11],
+                                                           scores_vgg16_cl_fc[12], scores_vgg16_cl_fc[13],
+                                                           scores_vgg16_cl_fc[14], scores_vgg16_cl_fc[15],
+                                                           scores_vgg16_cl_fc.mean()))
+
+
+
+
+
 
 
 
