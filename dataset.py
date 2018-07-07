@@ -30,6 +30,7 @@ class Dataset(Dataset):
         # conserviamo il riferimento alla trasformazione da applicare
         self.transform = transform
 
+
     def __getitem__(self, index):
         # recuperiamo il path dell'immagine di indice index e la relativa etichetta
         # f, c = self.images[index]
