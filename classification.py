@@ -609,8 +609,8 @@ def vgg16_fc():
     # print "Posa:", valid[0]['pose']
 
     # definiamo i dataloaders
-    train_loader = DataLoader(train, batch_size=16, num_workers=2, shuffle=True)  # shuffle accede ai dati in maniera casuale
-    valid_loader = DataLoader(valid, batch_size=16, num_workers=2)
+    train_loader = DataLoader(train, batch_size=32, num_workers=2, shuffle=True)  # shuffle accede ai dati in maniera casuale
+    valid_loader = DataLoader(valid, batch_size=32, num_workers=2)
 
 
 
@@ -626,7 +626,7 @@ def vgg16_fc():
 
     # ----- PLOT LOGS--------
 
-    plot_logs_classification(vgg16_fc_classifier)
+    plot_logs_classification(vgg16_fc_classifier_logs)
 
     # save plot
     plt.savefig('loss_vgg16_fc_classifier', format="jpg", bbox_inches='tight', pad_inches=0)
@@ -777,8 +777,8 @@ def vgg16_cl_fc():
     # print "Posa:", valid[0]['pose']
 
     # definiamo i dataloaders
-    train_loader = DataLoader(train, batch_size=16, num_workers=2, shuffle=True)  # shuffle accede ai dati in maniera casuale
-    valid_loader = DataLoader(valid, batch_size=16, num_workers=2)
+    train_loader = DataLoader(train, batch_size=32, num_workers=2, shuffle=True)  # shuffle accede ai dati in maniera casuale
+    valid_loader = DataLoader(valid, batch_size=32, num_workers=2)
 
 
 
@@ -793,7 +793,7 @@ def vgg16_cl_fc():
 
     # ----- PLOT LOGS--------
 
-    plot_logs_classification(vgg16_cl_fc_classifier)
+    plot_logs_classification(vgg16_cl_fc_classifier_logs)
 
     # save plot
     plt.savefig('loss_vgg16_cl_fc_classifier', format="jpg", bbox_inches='tight', pad_inches=0)
