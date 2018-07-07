@@ -6,6 +6,10 @@ import numpy as np
 import torch
 import regression
 import classification
+from inference import*
+import pandas as pd
+from classification_models import *
+from regression_models import*
 
 
 
@@ -57,3 +61,18 @@ torch.random.manual_seed(1234)
 
 #------------ VGG16 CL FC fine tuning REGRESSION--------------
 #regression.vgg16_cl_fc()
+
+
+
+
+
+
+
+
+
+
+# --------------- INFERENZA --------------------
+
+# PREDIZIONE CLASSI E POSE TEST SET
+#cls_model, reg_model = load_models(MLPClassifier(110592, 16, 512), MLPRegressor(110592, 4, 512), "mlp_classifier.pth", "mlp_regressor.pth")
+#predictions(cls_model, reg_model, get_test_batches(), "predictions.csv")

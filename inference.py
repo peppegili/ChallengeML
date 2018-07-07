@@ -9,8 +9,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from classification import normalization
-from classification_models import*
-from regression_models import *
+from torch import nn
 import csv
 
 
@@ -50,55 +49,33 @@ def get_test_batches(isVGG16=False):
 
 
     # dataloader
-    test_loader = DataLoader(test, batch_size=64, num_workers=2)
+    test_loader = DataLoader(test, batch_size=74, num_workers=2)
 
     return test_loader
 
 
 
-def load_model(model_obj, model_name):
-    model = model_obj
-    model.load_state_dict(torch.load(model_name))
-    return model
+def load_models(model_obj_cls, model_obj_reg, model_cls_name, model_reg_name):
+    model_cls = model_obj_cls
+    model_reg = model_obj_reg
+
+    model_cls.load_state_dict(torch.load(model_cls_name))
+    model_reg.load_state_dict(torch.load(model_reg_name))
+    return model_cls, model_reg
 
 
 
-def predict_classes(model, test_loader, predictions_classes_str):
+def predictions(model_cls, model_reg, test_loader, predictions_str):
     softmax = nn.Softmax(dim=1)
-    model.eval()
-    preds = []
-    imgs_name = []  # conterra il nome delle immagini di tutti i batch del test
+    model_cls.eval()
+    model_reg.eval()
 
-    for batch in test_loader:
-        x=Variable(batch['image'])
-        names = batch['name']  # nomi immagini del batch corrente
-
-        #applichiamo la funzione softmax per avere delle probabilità
-        if torch.cuda.is_available():
-            x = x.cuda()
-        pred = softmax(model(x)).data.cpu().numpy().copy()
-
-
-        preds.append(pred)
-        imgs_name.append(names)  # appendiamo i nomi delle immagini del batch corrente
-
-
-
-    predictions = zip(np.concatenate(imgs_name), np.concatenate(preds).argmax(1))
-
-    with open(predictions_classes_str, "w") as f:
-        writer = csv.writer(f)
-        for elem in predictions:
-            writer.writerow(elem)
-
-
-
-def predict_poses(model, test_loader, predictions_poses_str):
-    model.eval()
+    preds = [] # classi
     preds1 = []  # conterra la posa x stimata
     preds2 = []  # conterra la posa y stimata
     preds3 = []  # conterra la posa u stimata
     preds4 = []  # conterra la posa v stimata
+
     imgs_name = []  # conterra il nome delle immagini di tutti i batch del test
 
     for batch in test_loader:
@@ -108,37 +85,27 @@ def predict_poses(model, test_loader, predictions_poses_str):
         #applichiamo la funzione softmax per avere delle probabilità
         if torch.cuda.is_available():
             x = x.cuda()
-        pred = model(x).data.cpu().numpy().copy()
+        pred_cls = softmax(model_cls(x)).data.cpu().numpy().copy() #classi predette
+        pred_reg = model_reg(x).data.cpu().numpy().copy() # pose predette
 
 
 
         imgs_name.append(names)  # appendiamo i nomi delle immagini del batch corrente
-        preds1.append(pred.transpose()[0])  # posa x stimata del batch
-        preds2.append(pred.transpose()[1])  # posa y stimata del batch
-        preds3.append(pred.transpose()[2])  # posa u stimata del batch
-        preds4.append(pred.transpose()[3])  # posa v stimata del batch
-
+        preds.append(pred_cls) #classi
+        preds1.append(pred_reg.transpose()[0])  # posa x stimata del batch
+        preds2.append(pred_reg.transpose()[1])  # posa y stimata del batch
+        preds3.append(pred_reg.transpose()[2])  # posa u stimata del batch
+        preds4.append(pred_reg.transpose()[3])  # posa v stimata del batch
 
 
 
     predictions = zip(np.concatenate(imgs_name), np.concatenate(preds1), np.concatenate(preds2),
-                      np.concatenate(preds3), np.concatenate(preds4))
+                      np.concatenate(preds3), np.concatenate(preds4), np.concatenate(preds).argmax(1))
 
-    with open(predictions_poses_str, "w") as f:
+
+    with open(predictions_str, "wb") as f:
         writer = csv.writer(f)
         for elem in predictions:
             writer.writerow(elem)
+    f.close()
 
-
-
-
-
-
-
-
-
-# PREDIZIONE CLASSI TEST SET
-predict_classes(load_model(MLPClassifier(110592, 16, 512), "mlp_classifier.pth"), get_test_batches(isVGG16=False), "predictions_classes.csv")
-
-# PREDIZIONE POSE TEST SET
-predict_poses(load_model(MLPRegressor(110592, 4, 512), "mlp_regressor.pth"), get_test_batches(isVGG16=False), "predictions_poses.csv")

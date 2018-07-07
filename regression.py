@@ -637,8 +637,8 @@ def vgg16_fc():
     #print "Posa:", valid[0]['pose']
 
     # definiamo i dataloaders
-    train_loader = DataLoader(train, batch_size=32, num_workers=2, shuffle=True)  # shuffle accede ai dati in maniera casuale
-    valid_loader = DataLoader(valid, batch_size=32, num_workers=2)
+    train_loader = DataLoader(train, batch_size=16, num_workers=2, shuffle=True)  # shuffle accede ai dati in maniera casuale
+    valid_loader = DataLoader(valid, batch_size=16, num_workers=2)
 
 
 
@@ -808,8 +808,8 @@ def vgg16_cl_fc():
     # print "Posa:", valid[0]['pose']
 
     # definiamo i dataloaders
-    train_loader = DataLoader(train, batch_size=32, num_workers=2, shuffle=True)  # shuffle accede ai dati in maniera casuale
-    valid_loader = DataLoader(valid, batch_size=32, num_workers=2)
+    train_loader = DataLoader(train, batch_size=16, num_workers=2, shuffle=True)  # shuffle accede ai dati in maniera casuale
+    valid_loader = DataLoader(valid, batch_size=16, num_workers=2)
 
 
 
