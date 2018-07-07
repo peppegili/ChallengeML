@@ -588,7 +588,7 @@ def vgg16_fc():
 
     # facciamo una copia del modello
     vgg16 = deepcopy(vgg16_orig)
-    # vgg16 = vgg16.cuda()
+    #vgg16 = vgg16.cuda()
 
     for param in vgg16.features.parameters():
         param.requires_grad = False  # freeze dei layer convoluzionali
