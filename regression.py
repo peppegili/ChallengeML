@@ -654,7 +654,7 @@ def vgg16_fc():
 
     # ----- PLOT LOGS--------
 
-    plot_logs_regression(vgg16_fc_regressor)
+    plot_logs_regression(vgg16_fc_regressor_logs)
 
     # save plot
     plt.savefig('loss_vgg16_fc_regressor', format="jpg", bbox_inches='tight', pad_inches=0)
@@ -825,7 +825,7 @@ def vgg16_cl_fc():
 
     # ----- PLOT LOGS--------
 
-    plot_logs_regression(vgg16_cl_fc_regressor)
+    plot_logs_regression(vgg16_cl_fc_regressor_logs)
 
     # save plot
     plt.savefig('loss_vgg16_cl_fc_regressor', format="jpg", bbox_inches='tight', pad_inches=0)
