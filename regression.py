@@ -192,8 +192,8 @@ def test_model_regression(model, test_loader, predicted_pose_str, target_pose_st
         names = batch['name']  # nomi immagini del batch corrente
         if torch.cuda.is_available():
             x = x.cuda()
-        pred = model(x).data.numpy().copy()
-        gt = batch['pose'].numpy().copy()
+        pred =(model(x)).data.cpu().numpy().copy()
+        gt = batch['pose'].cpu().numpy().copy()
 
         imgs_name.append(names)  # appendiamo i nomi delle immagini del batch corrente
         preds1.append(pred.transpose()[0])  # posa x stimata del batch
