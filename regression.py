@@ -953,7 +953,7 @@ def vgg16_cl_fc_aug():
 
     features.insert(0, nn.Linear(8192, 2048))  # aggiungiamo il primo layer # img 144x256
     features.insert(3, nn.Linear(2048, 2048))  # aggiungiamo il quarto layer
-    features.append(nn.Linear(2048, 16))  # aggiungiamo layer con 16 output
+    features.append(nn.Linear(2048, 4))  # aggiungiamo layer con 16 output
 
     vgg16.classifier = nn.Sequential(*features)  # sostituiamo il modulo "classifier"
 
