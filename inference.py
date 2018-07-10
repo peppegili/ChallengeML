@@ -15,11 +15,11 @@ import csv
 
 
 
-def get_test_batches(isVGG16=False):
+def get_test_batches(isVGG16=False, isVGG16_AUG=False):
 
     # se non utilizziamo il modello vgg16 dobbiamo normalizzare rispetto alle statistiche del TS
-    if isVGG16 == False:
-        print "Inferenza: il modello utilizzato non è VGG16"
+    if isVGG16 == False and isVGG16_AUG == False:
+        print "Inferenza: il modello utilizzato è MLP"
         # get mean and devST of training data
         train = dataset.Dataset('dataset/images', 'dataset/training_list.csv', transform=transforms.ToTensor())
 
@@ -37,8 +37,8 @@ def get_test_batches(isVGG16=False):
         #print "Immagine di test:", test[1]['image'].shape # 3x144x256
 
 
-    # altrimenti dobbiamo normalizzare rispetto alle statistica di vgg16
-    else:
+    # altrimenti se utilizziamo vgg16 senza augmentation dobbiamo normalizzare rispetto alle statistica di vgg16
+    elif isVGG16 == True and isVGG16_AUG == False:
         print "Inferenza: il modello utilizzato è VGG16"
         transform = transforms.Compose([transforms.ToTensor(),  # conversione in tensore
                                         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]),  # nomrlizzazione con media e dvst del TS
@@ -46,6 +46,14 @@ def get_test_batches(isVGG16=False):
 
         test = dataset_inference.Dataset('dataset/images', 'dataset/testing_list_blind.csv', transform=transform)
 
+
+    elif isVGG16 == False and isVGG16_AUG == True:
+        print "Inferenza: il modello utilizzato è VGG16 con data augmentation"
+        transform = transforms.Compose([transforms.CenterCrop(128),  # square crop 128x128
+                                        transforms.ToTensor(),  # conversione in tensore
+                                        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]),  # nomrlizzazione con media e dvst del TS
+
+        test = dataset_inference.Dataset('dataset/images', 'dataset/testing_list_blind.csv', transform=transform)
 
 
     # dataloader

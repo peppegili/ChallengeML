@@ -38,6 +38,10 @@ torch.random.manual_seed(1234)
 #classification.vgg16_cl_fc()
 
 
+#------------ VGG16 CL FC fine tuning CLASSIFICATION -> con DATA AUGMENTATION--------------
+#classification.vgg16_cl_fc_aug()
+
+
 
 
 
@@ -63,6 +67,10 @@ torch.random.manual_seed(1234)
 #regression.vgg16_cl_fc()
 
 
+#------------ VGG16 CL FC fine tuning REGRESSION -> con DATA AUGMENTATION--------------
+#regression.vgg16_cl_fc_aug()
+
+
 
 
 
@@ -75,4 +83,4 @@ torch.random.manual_seed(1234)
 
 # PREDIZIONE CLASSI E POSE TEST SET
 #cls_model, reg_model = load_models(MLPClassifier(110592, 16, 512), MLPRegressor(110592, 4, 512), "mlp_classifier.pth", "mlp_regressor.pth")
-#predictions(cls_model, reg_model, get_test_batches(), "predictions.csv")
+#predictions(cls_model, reg_model, get_test_batches(isVGG16=False, isVGG16_AUG=False), "predictions.csv")

@@ -24,7 +24,7 @@ from copy import deepcopy
 
 # ------- TRAINING PROCEDURE -------
 
-def train_classification(model, train_loader, test_loader, lr=0.00001, epochs=100, momentum=0.9):
+def train_classification(model, train_loader, test_loader, lr=0.00001, epochs=100, momentum=0.9, weight_decay = 0.000001):
     since = time.time()
     print "---- TRAINING START ----"
 
@@ -32,7 +32,7 @@ def train_classification(model, train_loader, test_loader, lr=0.00001, epochs=10
     best_acc = 0.0
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = SGD(filter(lambda p: p.requires_grad, model.parameters()), lr, momentum=momentum)
+    optimizer = SGD(filter(lambda p: p.requires_grad, model.parameters()), lr, momentum=momentum, weight_decay=weight_decay)
 
     loaders = {'train': train_loader, 'test': test_loader}
     losses = {'train': [], 'test': []}
@@ -290,9 +290,9 @@ def mlp():
 
 
     #definiamo i dataloaders
-    train_loader = DataLoader(train, batch_size=64, num_workers=2, shuffle=True) #shuffle accede ai dati in maniera casuale
+    train_loader = DataLoader(train, batch_size=32, num_workers=2, shuffle=True) #shuffle accede ai dati in maniera casuale
     #shuffle permette di accedere ai dati in maniera casuale
-    valid_loader = DataLoader(valid, batch_size=64, num_workers=2)
+    valid_loader = DataLoader(valid, batch_size=32, num_workers=2)
 
 
 
@@ -300,7 +300,7 @@ def mlp():
 
     #----- START TRAINING -------
 
-    mlp_classifier, mlp_classifier_logs = train_classification(mlp_classifier, train_loader, valid_loader, epochs=100)
+    mlp_classifier, mlp_classifier_logs = train_classification(mlp_classifier, train_loader, valid_loader, epochs=150)
 
     # save the model
     torch.save(mlp_classifier.state_dict(), 'mlp_classifier.pth')
@@ -445,9 +445,9 @@ def deep_mlp():
 
 
     #definiamo i dataloaders
-    train_loader = DataLoader(train, batch_size=64, num_workers=2, shuffle=True) #shuffle accede ai dati in maniera casuale
+    train_loader = DataLoader(train, batch_size=32, num_workers=2, shuffle=True) #shuffle accede ai dati in maniera casuale
     #shuffle permette di accedere ai dati in maniera casuale
-    valid_loader = DataLoader(valid, batch_size=64, num_workers=2)
+    valid_loader = DataLoader(valid, batch_size=32, num_workers=2)
 
 
 
@@ -455,7 +455,7 @@ def deep_mlp():
 
     #----- START TRAINING -------
 
-    deep_mlp_classifier, deep_mlp_classifier_logs = train_classification(deep_mlp_classifier, train_loader, valid_loader, epochs=100)
+    deep_mlp_classifier, deep_mlp_classifier_logs = train_classification(deep_mlp_classifier, train_loader, valid_loader, epochs=150)
 
     # save the model
     torch.save(deep_mlp_classifier.state_dict(), 'deep_mlp_classifier.pth')
@@ -609,14 +609,14 @@ def vgg16_fc():
     # print "Posa:", valid[0]['pose']
 
     # definiamo i dataloaders
-    train_loader = DataLoader(train, batch_size=16, num_workers=2, shuffle=True)  # shuffle accede ai dati in maniera casuale
-    valid_loader = DataLoader(valid, batch_size=16, num_workers=2)
+    train_loader = DataLoader(train, batch_size=32, num_workers=2, shuffle=True)  # shuffle accede ai dati in maniera casuale
+    valid_loader = DataLoader(valid, batch_size=32, num_workers=2)
 
 
 
     #-------- START TRAINING ----------
 
-    vgg16_fc_classifier, vgg16_fc_classifier_logs = train_classification(vgg16, train_loader, valid_loader, epochs=100)
+    vgg16_fc_classifier, vgg16_fc_classifier_logs = train_classification(vgg16, train_loader, valid_loader, epochs=400)
 
     # save the model
     torch.save(vgg16_fc_classifier.state_dict(), 'vgg16_fc_classifier.pth')
@@ -777,14 +777,14 @@ def vgg16_cl_fc():
     # print "Posa:", valid[0]['pose']
 
     # definiamo i dataloaders
-    train_loader = DataLoader(train, batch_size=16, num_workers=2, shuffle=True)  # shuffle accede ai dati in maniera casuale
-    valid_loader = DataLoader(valid, batch_size=16, num_workers=2)
+    train_loader = DataLoader(train, batch_size=32, num_workers=2, shuffle=True)  # shuffle accede ai dati in maniera casuale
+    valid_loader = DataLoader(valid, batch_size=32, num_workers=2)
 
 
 
     # -------- START TRAINING ----------
 
-    vgg16_cl_fc_classifier, vgg16_cl_fc_classifier_logs = train_classification(vgg16, train_loader, valid_loader, epochs=100)
+    vgg16_cl_fc_classifier, vgg16_cl_fc_classifier_logs = train_classification(vgg16, train_loader, valid_loader, epochs=400)
 
     # save the model
     torch.save(vgg16_cl_fc_classifier.state_dict(), 'vgg16_cl_fc_classifier.pth')
@@ -868,6 +868,179 @@ def vgg16_cl_fc():
 
 
 
+
+
+
+
+# architettura VGG16 con fine tuning del modulo "classifier"(i fully connected layers finali)
+# e dell'ultimo blocco convoluzionale del modulo "features". Inoltre, si effettua la data augmentation
+def vgg16_cl_fc_aug():
+
+    #----MODEL-----
+    vgg16_orig = models.vgg16(pretrained=True)  # utilizziamo i pesi già allenati
+
+    # facciamo una copia del modello
+    vgg16 = deepcopy(vgg16_orig)
+    # vgg16 = vgg16.cuda()
+
+    for param in vgg16.features.parameters():
+        param.requires_grad = False  # freeze dei layer convoluzionali
+
+    #vgg16_trainable_parameters = filter(lambda p: p.requires_grad, vgg16.parameters())
+    #print "Numero di parametri trainabili vgg16: ", sum([p.numel() for p in vgg16_trainable_parameters])
+
+    # sfreez dell'ultimo blocco convoluzionale(dal livello 24 al 30) del modulo "features"
+    layer = -1
+    for child in vgg16.features.children():
+        # print child
+        layer += 1
+        if layer > 23 and layer < 31:
+            #print"Sfreezato -> ", child
+            for param in child.parameters():
+                param.requires_grad = True
+
+    #vgg16_trainable_parameters = filter(lambda p: p.requires_grad, vgg16.parameters())
+    #print "Numero di parametri trainabili vgg16: ", sum([p.numel() for p in vgg16_trainable_parameters])
+
+    features = list(vgg16.classifier.children())[1:-1]  # rimozione primo e ultimo layer
+
+    del features[2]  # rimozione quarto livello
+
+    features.insert(0, nn.Linear(8192, 2048))  # aggiungiamo il primo layer # img 144x256
+    features.insert(3, nn.Linear(2048, 2048))  # aggiungiamo il quarto layer
+    features.append(nn.Linear(2048, 16))  # aggiungiamo layer con 16 output
+
+    vgg16.classifier = nn.Sequential(*features)  # sostituiamo il modulo "classifier"
+
+    #print vgg16
+
+
+
+
+    # --------- DATALOADER AND TRANSFORMATION ----------
+
+    transform_train = transforms.Compose([transforms.RandomHorizontalFlip(),
+                                          transforms.ColorJitter(),
+                                          transforms.RandomRotation(20), # random rotate between -20 +20 degree
+                                          transforms.RandomCrop(128), # square crop 128x128
+                                          transforms.ToTensor(),  # conversione in tensore
+                                          transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])  # normalizzazione con media e dvst di vgg16
+
+    # ridefiniamo il training set specificando le trasformazioni
+    train = Dataset('dataset/images', 'dataset/training_list.csv', transform=transform_train)
+
+    # permutiamo i dati di training
+    idx = np.random.permutation(len(train))
+    train.images = train.images[idx]
+
+    # print "Immagine di train:", train[0]['image'].shape # 3x144x256
+    # print "Etichetta:", train[0]['label']
+    # print "Posa:", train[0]['pose']
+
+    # print ""
+
+    transform_valid = transforms.Compose([transforms.CenterCrop(128),  # square crop 128x128
+                                          transforms.ToTensor(),  # conversione in tensore
+                                          transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
+
+    # ridefiniamo il test set specificando le trasformazioni
+    valid = Dataset('dataset/images', 'dataset/validation_list.csv', transform=transform_valid)
+
+    # permutiamo i dati di validation
+    idx = np.random.permutation(len(valid))
+    valid.images = valid.images[idx]
+
+    # print "Immagine di validation:", valid[0]['image'].shape # 3x144x256
+    # print "Etichetta:", valid[0]['label']
+    # print "Posa:", valid[0]['pose']
+
+    # definiamo i dataloaders
+    train_loader = DataLoader(train, batch_size=32, num_workers=2, shuffle=True)  # shuffle accede ai dati in maniera casuale
+    valid_loader = DataLoader(valid, batch_size=32, num_workers=2)
+
+
+
+    # -------- START TRAINING ----------
+
+    vgg16_cl_fc_aug_classifier, vgg16_cl_fc_aug_classifier_logs = train_classification(vgg16, train_loader, valid_loader, epochs=400)
+
+    # save the model
+    torch.save(vgg16_cl_fc_aug_classifier.state_dict(), 'vgg16_cl_fc_aug_classifier.pth')
+
+
+
+    # ----- PLOT LOGS--------
+
+    plot_logs_classification(vgg16_cl_fc_aug_classifier_logs)
+
+    # save plot
+    plt.savefig('loss_vgg16_cl_fc_aug_classifier', format="jpg", bbox_inches='tight', pad_inches=0)
+
+
+
+    # ----- ACCURACY --------
+
+    vgg16_cl_fc_aug_classifier_predictions, vgg16_cl_fc_aug_classifier_gt = test_model_classification(vgg16_cl_fc_aug_classifier, valid_loader)
+
+    # print "Accuracy VGG16 CL FC Classifier: %0.2f" % \
+        # accuracy_score(vgg16_cl_fc_classifier_gt,vgg16_cl_fc_classifier_predictions.argmax(1))
+
+    # save on txt file
+    with open("acc_test_vgg16_cl_fc_aug_classifier.txt", "w") as text_file:
+        text_file.write("Accuracy VGG16 CL FC AUG Classifier: {:.2f}".format(accuracy_score(vgg16_cl_fc_aug_classifier_gt, vgg16_cl_fc_aug_classifier_predictions.argmax(1))))
+
+
+
+
+    # ---- CONFUSION MATRIX ----
+
+    conf_matrix_vgg16_cl_fc_aug = confusion_matrix(vgg16_cl_fc_aug_classifier_gt, vgg16_cl_fc_aug_classifier_predictions.argmax(1))
+    class_names = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+    # Plot non-normalized confusion matrix
+    plt.figure(figsize=(20, 20))
+    plt.subplot(211)
+    plot_confusion_matrix(conf_matrix_vgg16_cl_fc_aug, classes=class_names,
+                          title='Confusion matrix VGG16 CL FC AUG fine-tuning')
+
+    # Plot normalized confusion matrix
+    plt.subplot(212)
+    plot_confusion_matrix(conf_matrix_vgg16_cl_fc_aug, classes=class_names, normalize=True,
+                          title='Normalized Confusion Matrix VGG16 CL FC AUG fine-tuning')
+
+    # plot.show()
+
+    # save plot
+    plt.savefig('conf_matrix_vgg16_cl_fc_aug_classifier', format="jpg", bbox_inches='tight', pad_inches=0)
+
+
+
+    # ---- SCORE F1 AND mF1----
+
+    scores_vgg16_cl_fc_aug = f1_score(vgg16_cl_fc_aug_classifier_gt, vgg16_cl_fc_aug_classifier_predictions.argmax(1), average=None)
+    #print "Score F1 VGG16 CL FC AUG:", scores_vgg16_cl_fc_aug
+
+    #print "Score mF1 VGG16 CL FC AUG:", scores_vgg16_cl_fc_aug.mean()  # mF1
+
+    # save on txt file
+    with open("score_F1_mF1_vgg16_cl_fc_aug_classifier.txt", "w") as text_file:
+        text_file.write("Score F1 Classe0 VGG16 CL FC AUG Classifier: {:.2f}\nScore F1 Classe1 VGG16 CL FC AUG Classifier: {:.2f}\
+        \nScore F1 Classe2 VGG16 CL FC AUG Classifier: {:.2f}\nScore F1 Classe3 VGG16 CL FC AUG Classifier: {:.2f}\
+        \nScore F1 Classe4 VGG16 CL FC AUG Classifier: {:.2f}\nScore F1 Classe5 VGG16 CL FC AUG Classifier: {:.2f}\
+        \nScore F1 Classe6 VGG16 CL FC AUG Classifier: {:.2f}\nScore F1 Classe7 VGG16 CL FC AUG Classifier: {:.2f}\
+        \nScore F1 Classe8 VGG16 CL FC AUG Classifier: {:.2f}\nScore F1 Classe9 VGG16 CL FC AUG Classifier: {:.2f}\
+        \nScore F1 Classe10 VGG16 CL FC AUG Classifier: {:.2f}\nScore F1 Classe11 VGG16 CL FC AUG Classifier: {:.2f}\
+        \nScore F1 Classe12 VGG16 CL FC AUG Classifier: {:.2f}\nScore F1 Classe13 VGG16 CL FC AUG Classifier: {:.2f}\
+        \nScore F1 Classe14 VGG16 CL FC AUG Classifier: {:.2f}\nScore F1 Classe15 VGG16 CL FC AUG Classifier: {:.2f}\
+        \nScore mF1 VGG16 CL FC AUG Classifier: {:.2f}".format(scores_vgg16_cl_fc_aug[0], scores_vgg16_cl_fc_aug[1],
+                                                           scores_vgg16_cl_fc_aug[2], scores_vgg16_cl_fc_aug[3],
+                                                           scores_vgg16_cl_fc_aug[4], scores_vgg16_cl_fc_aug[5],
+                                                           scores_vgg16_cl_fc_aug[6], scores_vgg16_cl_fc_aug[7],
+                                                           scores_vgg16_cl_fc_aug[8], scores_vgg16_cl_fc_aug[9],
+                                                           scores_vgg16_cl_fc_aug[10], scores_vgg16_cl_fc_aug[11],
+                                                           scores_vgg16_cl_fc_aug[12], scores_vgg16_cl_fc_aug[13],
+                                                           scores_vgg16_cl_fc_aug[14], scores_vgg16_cl_fc_aug[15],
+                                                           scores_vgg16_cl_fc_aug.mean()))
 
 
 
