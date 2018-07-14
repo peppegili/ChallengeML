@@ -2,62 +2,31 @@
 # -*- coding: utf-8 -*-
 
 import dataset_inference
-import dataset
+#import dataset
 import torch
 from torch.autograd import Variable
 import numpy as np
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from classification import normalization
+#from classification import normalization
 from torch import nn
 import csv
+import time
 
 
 
 
-def get_test_batches(isVGG16=False, isVGG16_AUG=False):
+def get_test_batches():
+    transform = transforms.Compose([transforms.CenterCrop(128),  # square crop 128x128
+                                    transforms.ToTensor(),  # conversione in tensore
+                                    transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
 
-    # se non utilizziamo il modello vgg16 dobbiamo normalizzare rispetto alle statistiche del TS
-    if isVGG16 == False and isVGG16_AUG == False:
-        print "Inferenza: il modello utilizzato è MLP"
-        # get mean and devST of training data
-        train = dataset.Dataset('dataset/images', 'dataset/training_list.csv', transform=transforms.ToTensor())
-
-        m, s = normalization(train)
-
-        transform = transforms.Compose([transforms.ToTensor(),  # conversione in tensore
-                                        transforms.Normalize(m, s),  # nomrlizzazione con media e dvst del TS
-                                        transforms.Lambda(lambda x: x.view(-1))])  # trasforma l'immagine in un unico vettore
-
-
-
-        test = dataset_inference.Dataset('dataset/images', 'dataset/testing_list_blind.csv', transform=transform)
-
-        #print "Nome immagine:", test[1]['name']
-        #print "Immagine di test:", test[1]['image'].shape # 3x144x256
-
-
-    # altrimenti se utilizziamo vgg16 senza augmentation dobbiamo normalizzare rispetto alle statistica di vgg16
-    elif isVGG16 == True and isVGG16_AUG == False:
-        print "Inferenza: il modello utilizzato è VGG16"
-        transform = transforms.Compose([transforms.ToTensor(),  # conversione in tensore
-                                        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]),  # nomrlizzazione con media e dvst del TS
-
-
-        test = dataset_inference.Dataset('dataset/images', 'dataset/testing_list_blind.csv', transform=transform)
-
-
-    elif isVGG16 == False and isVGG16_AUG == True:
-        print "Inferenza: il modello utilizzato è VGG16 con data augmentation"
-        transform = transforms.Compose([transforms.CenterCrop(128),  # square crop 128x128
-                                        transforms.ToTensor(),  # conversione in tensore
-                                        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]),  # nomrlizzazione con media e dvst del TS
-
-        test = dataset_inference.Dataset('dataset/images', 'dataset/testing_list_blind.csv', transform=transform)
-
+    test = dataset_inference.Dataset('dataset/images', 'dataset/testing_list_blind.csv', transform=transform)
+    #print "Nome immagine:", test[1]['name']
+    #print "Immagine di test:", test[1]['image'].shape # 3x144x256
 
     # dataloader
-    test_loader = DataLoader(test, batch_size=74, num_workers=2)
+    test_loader = DataLoader(test, batch_size=64, num_workers=2)
 
     return test_loader
 
@@ -69,11 +38,15 @@ def load_models(model_obj_cls, model_obj_reg, model_cls_name, model_reg_name):
 
     model_cls.load_state_dict(torch.load(model_cls_name))
     model_reg.load_state_dict(torch.load(model_reg_name))
+
+
     return model_cls, model_reg
 
 
 
 def predictions(model_cls, model_reg, test_loader, predictions_str):
+    since = time.time()
+    print "---- START INFERENCE ----"
     softmax = nn.Softmax(dim=1)
     model_cls.eval()
     model_reg.eval()
@@ -116,4 +89,9 @@ def predictions(model_cls, model_reg, test_loader, predictions_str):
         for elem in predictions:
             writer.writerow(elem)
     f.close()
+
+
+    time_elapsed = time.time() - since
+
+    print('---- INFERENCE COMPLETE in {:.0f}m {:.0f}s ----'.format(time_elapsed // 60, time_elapsed % 60))
 

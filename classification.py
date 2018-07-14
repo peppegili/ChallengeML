@@ -724,7 +724,7 @@ def vgg16_cl_fc():
     for child in vgg16.features.children():
         # print child
         layer += 1
-        if layer > 23 and layer < 31:
+        if layer > 23 and layer < 31: # provato anche con layer>16
             #print"Sfreezato -> ", child
             for param in child.parameters():
                 param.requires_grad = True
@@ -873,7 +873,7 @@ def vgg16_cl_fc():
 
 
 # architettura VGG16 con fine tuning del modulo "classifier"(i fully connected layers finali)
-# e dell'ultimo blocco convoluzionale del modulo "features". Inoltre, si effettua la data augmentation
+# e degli ultimi due blocchi convoluzionali del modulo "features". Inoltre, si effettua la data augmentation
 def vgg16_cl_fc_aug():
 
     #----MODEL-----
@@ -889,15 +889,21 @@ def vgg16_cl_fc_aug():
     #vgg16_trainable_parameters = filter(lambda p: p.requires_grad, vgg16.parameters())
     #print "Numero di parametri trainabili vgg16: ", sum([p.numel() for p in vgg16_trainable_parameters])
 
-    # sfreez dell'ultimo blocco convoluzionale(dal livello 24 al 30) del modulo "features"
+    # sfreez degli ultimi due blocchi convoluzionali(dal livello 17 al 30) del modulo "features"
     layer = -1
     for child in vgg16.features.children():
         # print child
         layer += 1
-        if layer > 23 and layer < 31:
+        if layer > 16 and layer < 31:
             #print"Sfreezato -> ", child
             for param in child.parameters():
                 param.requires_grad = True
+
+
+    # cambiamo i dropout nel blocco fully connected
+    for layer in vgg16.classifier.children():
+        if (type(layer) == nn.Dropout):
+            layer.p = 0.25
 
     #vgg16_trainable_parameters = filter(lambda p: p.requires_grad, vgg16.parameters())
     #print "Numero di parametri trainabili vgg16: ", sum([p.numel() for p in vgg16_trainable_parameters])

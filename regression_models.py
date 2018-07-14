@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from torch import nn
-
+from torchvision import models
 
 
 
@@ -56,3 +56,37 @@ class DeepMLPRegressor(nn.Module):
 
 
 #---- VGG16 ----
+
+def vgg16_model():
+    model = models.vgg16(pretrained=True)
+
+    for param in model.features.parameters():
+        param.requires_grad = False  # freeze dei layer convoluzionali
+
+    layer = -1
+    for child in model.features.children():
+        # print child
+        layer += 1
+        if layer > 16 and layer < 31:
+            # print"Sfreezato -> ", child
+            for param in child.parameters():
+                param.requires_grad = True
+
+    # cambiamo i dropout nel blocco fully connected
+    for layer in model.classifier.children():
+        if (type(layer) == nn.Dropout):
+            layer.p = 0.25
+
+    features = list(model.classifier.children())[1:-1]  # rimozione primo e ultimo layer
+
+    del features[2]  # rimozione quarto livello
+
+    features.insert(0, nn.Linear(8192, 2048))  # aggiungiamo il primo layer # img 144x256
+    features.insert(3, nn.Linear(2048, 2048))  # aggiungiamo il quarto layer
+    features.append(nn.Linear(2048, 4))  # aggiungiamo layer con 16 output
+
+    model.classifier = nn.Sequential(*features)  # sostituiamo il modulo "classifier"
+
+    # print model
+
+    return model
