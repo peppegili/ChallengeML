@@ -44,11 +44,11 @@ torch.random.manual_seed(1234)
 # --------------- INFERENZA --------------------
 
 # PREDIZIONE CLASSI E POSE TEST SET
-vgg16_cls_model = classification_models.vgg16_model()
-vgg16_reg_model = regression_models.vgg16_model()
+#vgg16_cls_model = classification_models.vgg16_model()
+#vgg16_reg_model = regression_models.vgg16_model()
 
-cls_model, reg_model = load_models(vgg16_cls_model, vgg16_reg_model, "vgg16_classifier.pth", "vgg16_regressor.pth")
-predictions(cls_model, reg_model, get_test_batches(), "predictions.csv")
+#cls_model, reg_model = load_models(vgg16_cls_model, vgg16_reg_model, "vgg16_classifier.pth", "vgg16_regressor.pth")
+#predictions(cls_model, reg_model, get_test_batches(), "predictions.csv")
 
 
 
