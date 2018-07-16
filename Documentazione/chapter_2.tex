@@ -1,0 +1,517 @@
+\chapter{Esperimenti}
+
+I primi esperimenti effettuati vertono sulla risoluzione del {\bf problema di classificazione}.
+\newline
+Abbiamo implementato le seguenti architetture di rete:
+\begin{itemize}
+	\item[•]{\bf MLP}: semplice MLP con un livello nascosto
+	\item[•]{\bf MLP Deep}: MLP con due livelli nascosti
+	\item[•]{\bf VGG16 pre-addestrata}: viene ripresa l’architettura di rete VGG16 e inizializzata con i pesi della stessa rete pre-addestrata su un task differente. Vengono poi effettuate diverse strategie di fine-tuning della rete
+\end{itemize}	
+Per la risoluzione del {\bf problema di regressione} abbiamo effettuato gli esperimenti essenzialmente con le medesime architetture, andando però a modellare le architetture per la semantica del task.
+\\
+\\
+Per le reti MLP viene effettuata la normalizzazione delle immagini per media e deviazione standard del training set, mentre per quanto riguarda la rete VGG16 pre-addestrata viene effettuata la normalizzazione delle immagini per media e deviazione standard del dataset “ImageNet” su cui è stata allenata la rete VGG16.
+
+\section{Architettura MLP}
+
+\subsection{Classificazione}
+Utilizziamo una semplice architettura MLP con tre livelli:
+\begin{itemize}
+	\item[•]Livello di input: 110592 neuroni. In input abbiamo immagini di dimensione 144x256x3
+	\item[•]Livello nascosto: 512 neuroni
+	\item[•]Livello di output: 16 neuroni (Softmax)
+\end{itemize}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.6]{image3.png}
+\end{figure}
+Per la procedura di training utilizziamo: 
+\begin{itemize}
+	\item[•]Learning rate: 0.00001
+	\item[•]Momentum: 0.9
+	\item[•]Weight decay: 0.000001
+\end{itemize}
+Come loss function utilizziamo cross entropy loss, come funzione di attivazione utilizziamo ReLU, mentre come metodo di learning utilizziamo SGD.
+\newline
+Abbiamo allenato il modello per 150 epoche, ed abbiamo ottenuto i seguenti risultati:
+
+\subsubsection{Accuracy}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.65]{image4.png}
+\end{figure}
+Dai due plot si osserva come sul validation la loss rimane relativamente alta, e l’accuracy relativamente bassa. Da ciò si intuisce che questo approccio non dà i risultati sperati.
+
+\subsubsection{Matrice di confusione}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.5]{image5.png}
+\end{figure}
+Nella matrice di confusione, l'elemento di indici i,j indica quanti elementi {\bf appartenenti alla classe i sono stati classificati come appartenenti alla classe j}. \\
+In pratica un buon classificatore presenterebbe una matrice di confusione con i numeri sulla diagonale principale alti e i numeri fuori dalla diagonale principale bassi. \\
+Attraverso essa è possibile confrontare visivamente i valori reali con quelli stimati dal modello e quindi controllare quali elementi vengono classificati correttamente e quali no. Gli score F1 ne sono una conferma.
+
+\subsubsection{Score F1 e Score mF1}
+\begin{center}
+\begin{tabular}{| l | l | l | l |}
+	\hline
+	Classe & Score F1 \\ \hline
+	0 & 0.57 \\ \hline
+	1 & 0.19 \\ \hline
+	2 & 0.61 \\ \hline
+	3 & 0.44\\ \hline
+	4 & 0.74 \\ \hline
+	5 & 0.70\\ \hline
+	6 & 0.58 \\ \hline
+	7 & 0.75\\ \hline
+	8 & 0.75 \\ \hline
+	9 & 0.78\\ \hline
+	10 & 0.77 \\ \hline
+	11 & 0.87 \\ \hline
+	12 & 0.88 \\ \hline
+	13 & 0.72 \\ \hline
+	14 & 0.75\\ \hline
+	15 & 0.87 \\ \hline 
+	{\bf Score mF1} & 0.68 \\ \hline							
+\end{tabular}
+\end{center}
+Gli score F1 indicano le performance del classificatore MLP per ogni classe. Per ottenere un indicatore generale di performance viene calcolata la media dei punteggi relativi alle singole classi, che è relativamente basso e pari a 0.68
+\newline
+Con questa architettura otteniamo una {\bf accuracy} di {\bf 0.75} sul validation. 
+
+\subsection{Regressione}
+Utilizziamo la semplice architettura MLP con tre livelli vista sopra, con la sola differenza che il livello di output avrà 4 neuroni e non più il classificatore softmax:
+\begin{itemize}
+	\item[•]Livello di input: 110592 neuroni. In input abbiamo immagini di dimensione 144x256x3
+	\item[•]Livello nascosto: 512 neuroni
+	\item[•]Livello di output: 4 neuroni
+\end{itemize}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.6]{image6.png}
+\end{figure}
+A differenza di quanto fatto per la classificazione, l’ultimo livello non sarà più softmax, in quanto non abbiamo più bisogno di una distribuzione di probabilità sulle classi, ma un vettore di 4 parametri corrispondenti ai valori x, y, u, v che localizzano un’immagine.
+Per la procedura di training utilizziamo: 
+\begin{itemize}
+	\item[•]Learning rate: 0.00001
+	\item[•]Momentum: 0.9
+	\item[•]Weight decay: 0.000001
+\end{itemize}
+Come loss function da ottimizzare utilizziamo MSE loss, come funzione di attivazione utilizziamo Tanh, mentre come metodo di learning utilizziamo SGD.
+\newline
+Poiché abbiamo da stimare quattro numeri reali x, y, u, v, utilizziamo a tale scopo quattro loss functions, una per ogni valore, le quali verranno ottimizzate assieme durante la procedura di training.
+\newline
+Abbiamo allenato il modello per 150 epoche, ed abbiamo ottenuto i seguenti risultati:
+
+\subsubsection{Loss functions}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.70]{image7.png}
+\end{figure}
+Come è possibile osservare dai 4 plot le loss di validation non raggiungono un valore ottimale, come, invece, accade sul training.
+
+\subsubsection{MSE errors}
+\begin{center}
+	\begin{tabular}{| l | l | l | l |}
+		\hline
+		MSE sul parametro X & 45.84 \\ \hline
+		MSE sul parametro Y & 8.10 \\ \hline
+		MSE sul parametro U & 0.34 \\ \hline
+		MSE sul parametro V & 0.33 \\ \hline							
+	\end{tabular}
+\end{center}
+
+\subsubsection{REC curves}
+Le REC curve rappresentano un metodo grafico per valutare la bontà di un metodo di regressione. Inoltre, alla curva è spesso associata l'area sopra la curva (AOC) per offrire una misura dell'errore del metodo.
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.70]{image8.png}
+\end{figure}
+
+\subsubsection{RMS error}
+errore RMS (Root Mean Square) medio e mediano relativo a posizione (in metri) e orientamento (in gradi):
+\begin{center}
+	\begin{tabular}{| l | l | l | l |}
+		\hline
+		Mean location error & 5.7011 \\ \hline
+		Median location error & 4.3916 \\ \hline
+		Mean orientation error & 46.4265 \\ \hline
+		Median orientation error & 29.7348 \\ \hline							
+	\end{tabular}
+\end{center}
+
+%==========================================
+\newpage
+
+\section{Architettura MLP Deep}
+
+\subsection{Classificazione}
+Utilizziamo un’architettura di rete molto simile a quella appena vista, con la differenza dell’aggiunta di un secondo livello nascosto:
+\begin{itemize}
+	\item[•]Livello di input: 110592 neuroni. In input abbiamo immagini di dimensione 144x256x3
+	\item[•]2 livelli nascosti: 512 neuroni ciascuno
+	\item[•]Livello di output: 16 neuroni (Softmax)
+\end{itemize}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.6]{image9.png}
+\end{figure}
+Per la procedura di training utilizziamo: 
+\begin{itemize}
+	\item[•]Learning rate: 0.00001
+	\item[•]Momentum: 0.9
+	\item[•]Weight decay: 0.000001
+\end{itemize}
+Come loss function utilizziamo cross entropy loss, come funzione di attivazione utilizziamo ReLU, mentre come metodo di learning utilizziamo SGD.
+\newline
+Abbiamo allenato il modello per 150 epoche, ed abbiamo ottenuto i seguenti risultati:
+\subsubsection{Accuracy}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.65]{image10.png}
+\end{figure}
+Anche in questo caso, dai due plot, si osserva come sul validation la loss rimane relativamente alta, e l’accuracy relativamente bassa. Da ciò si intuisce che anche questo approccio non dà i risultati sperati.
+
+\subsubsection{Matrice di confusione}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.5]{image11.png}
+\end{figure}
+Dalla matrice di confusione possiamo vedere sulla diagonale principale i rates  in percentuale che sussistono tra le etichette predette e quelle reali. \\
+A conferma di questi valori si possono osservare gli score F1.
+
+
+\subsubsection{Score F1 e Score mF1}
+\begin{center}
+	\begin{tabular}{| l | l | l | l |}
+		\hline
+		Classe & Score F1 \\ \hline
+		0 & 0.52 \\ \hline
+		1 & 0.19 \\ \hline
+		2 & 0.61 \\ \hline
+		3 & 0.43\\ \hline
+		4 & 0.74 \\ \hline
+		5 & 0.65\\ \hline
+		6 & 0.57 \\ \hline
+		7 & 0.68\\ \hline
+		8 & 0.71 \\ \hline
+		9 & 0.75\\ \hline
+		10 & 0.76 \\ \hline
+		11 & 0.86 \\ \hline
+		12 & 0.87 \\ \hline
+		13 & 0.71 \\ \hline
+		14 & 0.74\\ \hline
+		15 & 0.85 \\ \hline 
+		{\bf Score mF1} & 0.67 \\ \hline							
+	\end{tabular}
+\end{center}
+Come è possibile vedere, anche in questo caso, otteniamo un score mF1 relativamente basso e pari a 0.67.
+\newline
+Con questa architettura otteniamo una {\bf accuracy} di {\bf 0.73} sul validation. 
+
+\subsection{Regressione}
+L’architettura di rete è la seguente:
+\begin{itemize}
+	\item[•]Livello di input: 110592 neuroni. In input abbiamo immagini di dimensione 144x256x3
+	\item[•]2 livelli nascosti: 512 neuroni ciascuno
+	\item[•]Livello di output: 4 neuroni
+\end{itemize}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.6]{image12.png}
+\end{figure}
+Essendo un problema di regressione, il livello di output sarà costituito da 4 neuroni corrispondenti ai valori x, y, u, v che localizzano un’immagine.
+Per la procedura di training utilizziamo: 
+\begin{itemize}
+	\item[•]Learning rate: 0.00001
+	\item[•]Momentum: 0.9
+	\item[•]Weight decay: 0.000001
+\end{itemize}
+Come loss function da ottimizzare utilizziamo MSE loss, come funzione di attivazione utilizziamo Tanh, mentre come metodo di learning utilizziamo SGD.
+Poiché abbiamo da stimare quattro numeri reali x, y, u, v, utilizziamo a tale scopo quattro loss functions, una per ogni valore, le quali verranno ottimizzate assieme durante la procedura di training.
+Abbiamo allenato il modello per 150 epoche, ed abbiamo ottenuto i seguenti risultati:
+
+\subsubsection{Loss functions}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.70]{image13.png}
+\end{figure}
+Anche in questo caso i plot mostrano dei risultati relativamente alti per le loss functions sul validation. 
+
+\subsubsection{MSE errors}
+\begin{center}
+	\begin{tabular}{| l | l | l | l |}
+		\hline
+		MSE sul parametro X & 44.92 \\ \hline
+		MSE sul parametro Y & 8.19 \\ \hline
+		MSE sul parametro U & 0.33 \\ \hline
+		MSE sul parametro V & 0.34 \\ \hline							
+	\end{tabular}
+\end{center}
+
+\subsubsection{REC curves}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.70]{image14.png}
+\end{figure}
+
+\subsubsection{RMS error}
+errore RMS (Root Mean Square) medio e mediano relativo a posizione (in metri) e orientamento (in gradi):
+\begin{center}
+	\begin{tabular}{| l | l | l | l |}
+		\hline
+		Mean location error & 5.6398 \\ \hline
+		Median location error & 4.4736 \\ \hline
+		Mean orientation error & 48.5022 \\ \hline
+		Median orientation error & 33.9735 \\ \hline							
+	\end{tabular}
+\end{center}
+
+%==========================================
+
+\newpage
+\section{Architettura VGG16 pre-addestrata}
+Come si è osservato negli esperimenti sovrastanti, i risultati raggiunti non sono stati soddisfacenti, in particolare i plot mostravano che la loss di validation non decresceva così come quella di training. Questo è un chiaro esempio di modelli che non generalizzano a dovere. \\
+Risulta quindi necessario affrontare un’altra tecnica chiamata transfer learning che ci aiuta ad allenare modelli più accurati, con la speranza di ottenere risultati ottimali.
+\\ \\
+Abbiamo sfruttato l’architettura di rete {\bf VGG-16} pre-addestrata sul dataset “ImageNet” per affrontare i nostri task di classificazione e regressione.\\
+Diamo uno sguardo all’architettura generale:
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.70]{image15.png}
+\end{figure}
+L’architettura contiene cinque blocchi convoluzionali ed un blocco fully connected finale, e tutti i parametri sono stati allenati per la classificazione su 1000 classi. \\
+La rete prende in input immagini 244x244x3 sotto forma di batches, che vengono normalizzate con media e deviazione standard del dataset “ImageNet”. \\
+Abbiamo quindi la necessità, come primo passo, di adattare l’architettura alla dimensione dei nostri input, in modo tale da poter accettare in input immagini 144x256x3:
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.70]{image16.png}
+\end{figure}
+Successivamente abbiamo seguito due differenti approcci di fine-tuning sulla rete:
+\begin{itemize}
+	\item[1.]“Freeze” dei parametri di tutti i livelli convoluzionali, a differenza di quelli dell’ultimo blocco fully connected
+	\item[2.]“Freeze” dei parametri di tutti i livelli convoluzionali, a differenza di quelli dell’ultimo blocco convoluzionale e del blocco fully connected
+	\item[3.]“Freeze” dei parametri di tutti i livelli convoluzionali, a differenza di quelli degli ultimi due blocchi convoluzionali, del blocco fully connected e con l’aggiunta di data augmentation. Questo approccio rappresenterà il nostro metodo proposto
+\end{itemize}
+
+\section{VGG16 pre-addestrata: {1\textdegree} approccio}
+Sono stati freezati tutti i livelli del modulo “features” che contiene i blocchi convoluzionali. In questo modo verranno aggiornati solamente i parametri dei livelli del modulo “classifier”, lasciano invariati quelli di tutti i blocchi convoluzionali.
+
+\subsection{Classificazione}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.70]{image17.png}
+\end{figure}
+Poichè il task di classificazione richiede in output 16 classi, sono stati modificati gli ultimi livelli lineari impostando a 16 le features di output dell’ultimo livello con classificatore softmax.
+Per la procedura di training utilizziamo: 
+\begin{itemize}
+	\item[•]Learning rate: 0.00001
+	\item[•]Momentum: 0.9
+	\item[•]Weight decay: 0.000001
+\end{itemize}
+Come loss function utilizziamo cross entropy loss, come funzione di attivazione utilizziamo ReLU, mentre come metodo di learning utilizziamo SGD. \\
+Abbiamo allenato il modello per 400 epoche, ed abbiamo ottenuto i seguenti risultati:
+
+\subsubsection{Accuracy}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.65]{image18.png}
+\end{figure}
+Dai plot, di cui sopra, possiamo osservare che le CNN danno risultati ampiamenti migliori. Infatti siamo riusciti ad avvicinare quanto più possibile la loss di validation a quella di training. 
+
+\subsubsection{Matrice di confusione}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.5]{image19.png}
+\end{figure}
+Anche dalla matrice di confusione vengono evidenziati miglioramenti avvenuti con le CNN.
+
+\subsubsection{Score F1 e Score mF1}
+\begin{center}
+	\begin{tabular}{| l | l | l | l |}
+		\hline
+		Classe & Score F1 \\ \hline
+		0 & 0.89 \\ \hline
+		1 & 0.95 \\ \hline
+		2 & 0.93 \\ \hline
+		3 & 0.94 \\ \hline
+		4 & 0.96 \\ \hline
+		5 & 0.93 \\ \hline
+		6 & 0.93 \\ \hline
+		7 & 0.98 \\ \hline
+		8 & 0.95 \\ \hline
+		9 & 0.99 \\ \hline
+		10 & 0.92 \\ \hline
+		11 & 0.95 \\ \hline
+		12 & 0.99 \\ \hline
+		13 & 0.97 \\ \hline
+		14 & 0.93\\ \hline
+		15 & 0.95 \\ \hline 
+		{\bf Score mF1} & 0.95 \\ \hline							
+	\end{tabular}
+\end{center}
+Come è possibile vedere si ha uno score mF1 più alto e pari a 0.95.
+\\
+Con questa architettura otteniamo una {\bf accuracy} di {\bf 0.95} sul validation. 
+
+\subsection{Regressione}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.70]{image20.png}
+\end{figure}
+Poiché il task di regressione richiede in output 4 numeri reali x, y, u, v, sono stati modificati gli ultimi livelli lineari impostando a 4 le features di output dell’ultimo livello.
+Per la procedura di training utilizziamo: 
+\begin{itemize}
+	\item[•]Learning rate: 0.00001
+	\item[•]Momentum: 0.9
+	\item[•]Weight decay: 0.000001
+\end{itemize}
+Come loss function da ottimizzare utilizziamo MSE loss, come funzione di attivazione utilizziamo ReLU, mentre come metodo di learning utilizziamo SGD. \\
+Poiché abbiamo da stimare quattro numeri reali x, y, u, v, utilizziamo a tale scopo quattro loss functions, una per ogni valore, le quali verranno ottimizzate assieme durante la procedura di training. \\
+Abbiamo allenato il modello per 400 epoche, ed abbiamo ottenuto i seguenti risultati:
+
+\subsubsection{Loss functions}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.70]{image21.png}
+\end{figure}
+Come è possibile osservare le loss sul validation si avvicinano a quelle del training. Tuttavia ancora siamo lontani dai risultati ottimali avuti col metodo proposto.
+
+\subsubsection{MSE errors}
+\begin{center}
+	\begin{tabular}{| l | l | l | l |}
+		\hline
+		MSE sul parametro X & 9.94 \\ \hline
+		MSE sul parametro Y & 1.71 \\ \hline
+		MSE sul parametro U & 0.10 \\ \hline
+		MSE sul parametro V & 0.07 \\ \hline							
+	\end{tabular}
+\end{center}
+
+\subsubsection{REC curves}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.70]{image22.png}
+\end{figure}
+
+\subsubsection{RMS error}
+errore RMS (Root Mean Square) medio e mediano relativo a posizione (in metri) e orientamento (in gradi):
+\begin{center}
+	\begin{tabular}{| l | l | l | l |}
+		\hline
+		Mean location error & 2.5976 \\ \hline
+		Median location error & 1.9156 \\ \hline
+		Mean orientation error & 12.9392 \\ \hline
+		Median orientation error & 7.6587 \\ \hline							
+	\end{tabular}
+\end{center}
+
+%==========================================
+\section{VGG16 pre-addestrata: {2\textdegree} approccio}
+Sono stati freezati tutti i livelli del modulo “features” che contiene i blocchi convoluzionali, ad eccezione dell’ultimo blocco. In questo modo verranno aggiornati solamente i parametri dei livelli del modulo “classifier”, ed i parametri dei livelli dell’ultimo blocco convoluzionale.
+\subsection{Classificazione}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.70]{image23.png}
+\end{figure}
+Poichè il task di classificazione richiede in output 16 classi, sono stati modificati gli ultimi livelli lineari impostando a 16 le features di output dell’ultimo livello con classificatore softmax.
+Per la procedura di training utilizziamo: 
+\begin{itemize}
+	\item[•]Learning rate: 0.00001
+	\item[•]Momentum: 0.9
+	\item[•]Weight decay: 0.000001
+\end{itemize}
+Come loss function utilizziamo cross entropy loss, come funzione di attivazione utilizziamo ReLU, mentre come metodo di learning utilizziamo SGD. \\
+Abbiamo allenato il modello per 400 epoche, ed abbiamo ottenuto i seguenti risultati:
+
+\subsubsection{Accuracy}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.65]{image24.png}
+\end{figure}
+Dai plot, di cui sopra, è possibile osservare che i ottiene una accuracy relativamente alta: 0.96.
+
+\subsubsection{Matrice di confusione}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.5]{image25.png}
+\end{figure}
+Abbiamo ottimi risultati sulla diagonale principale, infatti avremo degli score F1 maggiori.
+
+\subsubsection{Score F1 e Score mF1}
+\begin{center}
+	\begin{tabular}{| l | l | l | l |}
+		\hline
+		Classe & Score F1 \\ \hline
+		0 & 0.91 \\ \hline
+		1 & 0.97 \\ \hline
+		2 & 0.93 \\ \hline
+		3 & 0.95 \\ \hline
+		4 & 0.96 \\ \hline
+		5 & 0.93 \\ \hline
+		6 & 0.96 \\ \hline
+		7 & 0.96 \\ \hline
+		8 & 0.96 \\ \hline
+		9 & 0.99 \\ \hline
+		10 & 0.92 \\ \hline
+		11 & 0.96 \\ \hline
+		12 & 0.99 \\ \hline
+		13 & 0.98 \\ \hline
+		14 & 0.95\\ \hline
+		15 & 0.96 \\ \hline 
+		{\bf Score mF1} & 0.95 \\ \hline							
+	\end{tabular}
+\end{center}
+Con questa architettura abbiamo raggiunto una {\bf accuracy} di {\bf 0.96} sul validation.
+
+\subsection{Regressione}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.70]{image26.png}
+\end{figure}
+Poiché il task di regressione richiede in output 4 numeri reali x, y, u, v, sono stati modificati gli ultimi livelli lineari impostando a 4 le features di output dell’ultimo livello. \\
+Per la procedura di training utilizziamo:
+\begin{itemize}
+	\item[•]Learning rate: 0.00001
+	\item[•]Momentum: 0.9
+	\item[•]Weight decay: 0.000001
+\end{itemize} 
+Come loss function da ottimizzare utilizziamo MSE loss, come funzione di attivazione utilizziamo ReLU, mentre come metodo di learning utilizziamo SGD. \\
+Poiché abbiamo da stimare quattro numeri reali x, y, u, v, utilizziamo a tale scopo quattro loss functions, una per ogni valore, le quali verranno ottimizzate assieme durante la procedura di training. \\
+Abbiamo allenato il modello per 400 epoche, ed abbiamo ottenuto i seguenti risultati:
+
+\subsubsection{Loss functions}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.70]{image27.png}
+\end{figure}
+
+\subsubsection{MSE errors}
+\begin{center}
+	\begin{tabular}{| l | l | l | l |}
+		\hline
+		MSE sul parametro X & 3.55 \\ \hline
+		MSE sul parametro Y & 0.85 \\ \hline
+		MSE sul parametro U & 0.06 \\ \hline
+		MSE sul parametro V & 0.04 \\ \hline							
+	\end{tabular}
+\end{center}
+
+\subsubsection{REC curves}
+\begin{figure}[H]
+	\centering
+	\includegraphics[scale=0.70]{image28.png}
+\end{figure}
+
+\subsubsection{RMS error}
+errore RMS (Root Mean Square) medio e mediano relativo a posizione (in metri) e orientamento (in gradi):
+\begin{center}
+	\begin{tabular}{| l | l | l | l |}
+		\hline
+		Mean location error & 1.5754 \\ \hline
+		Median location error & 1.1219 \\ \hline
+		Mean orientation error & 8.7991 \\ \hline
+		Median orientation error & 5.3730 \\ \hline							
+	\end{tabular}
+\end{center}

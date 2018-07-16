@@ -1,0 +1,83 @@
+\documentclass[12pt,oneside,a4paper,PisaPhdThesis]{library//PhdThesis}
+\usepackage[italian]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsfonts,amsthm,graphicx,mathrsfs,braket,float}
+\usepackage[hidelinks]{hyperref}
+\usepackage{bytefield}
+\usepackage{multirow}
+\usepackage{url}
+\usepackage{afterpage}
+\usepackage{textcomp}
+\newcommand\blankpage{%
+    \null
+    \thispagestyle{empty}%
+    \addtocounter{page}{-1}%
+    \newpage
+}
+\setcounter{secnumdepth}{4} 
+\setcounter{tocdepth}{3}
+\linespread{1.0}
+\graphicspath{ {./images/} }
+
+\newlength{\defbaselineskip}
+\setlength{\defbaselineskip}{\baselineskip}
+\newcommand{\setlinespacing}[1]%
+           {\setlength{\baselineskip}{#1 \defbaselineskip}}
+\newcommand{\doublespacing}{\setlength{\baselineskip} {2.0 \defbaselineskip}}
+\newcommand{\singlespacing}{\setlength{\baselineskip}{\defbaselineskip}}
+\newcommand{\mycenterline}[1]{\vspace{.1cm}\newline\vspace{.1cm}\centerline{#1}}
+
+
+\begin{document}
+\selectlanguage{italian}
+
+% [START] Frontespizio
+\include{frontespizio}
+% [END]
+
+\chaptertitlestyle{serifbig}
+\pagestyle{serif}
+
+%\maketitle
+
+\begin{frontmatter}
+\setlinespacing{1.5}
+\pagenumbering{roman}
+\tableofcontents
+\pagenumbering{arabic} \setcounter{page}{1}
+\end{frontmatter}
+
+%=====================
+
+% [START] Capitolo 1
+\include{chapter_1}
+% [END]
+
+%=====================
+
+% [START] Capitolo 
+\include{chapter_2}
+% [END]
+
+%=====================
+
+% [START] Capitolo 3
+\include{chapter_3}
+% [END]
+
+%=====================
+
+% [START] Conclusione
+\include{conclusion}
+% [END]
+
+%=====================
+
+% [START] Bibliografia
+%\include{bibliography}
+% [END]
+
+%=====================
+
+
+\end{document}

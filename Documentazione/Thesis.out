@@ -1,0 +1,54 @@
+\BOOKMARK [0][-]{chapter.1}{Introduzione}{}% 1
+\BOOKMARK [0][-]{chapter.2}{Esperimenti}{}% 2
+\BOOKMARK [1][-]{section.2.1}{Architettura MLP}{chapter.2}% 3
+\BOOKMARK [2][-]{subsection.2.1.1}{Classificazione}{section.2.1}% 4
+\BOOKMARK [3][-]{subsubsection.2.1.1.1}{Accuracy}{subsection.2.1.1}% 5
+\BOOKMARK [3][-]{subsubsection.2.1.1.2}{Matrice di confusione}{subsection.2.1.1}% 6
+\BOOKMARK [3][-]{subsubsection.2.1.1.3}{Score F1 e Score mF1}{subsection.2.1.1}% 7
+\BOOKMARK [2][-]{subsection.2.1.2}{Regressione}{section.2.1}% 8
+\BOOKMARK [3][-]{subsubsection.2.1.2.1}{Loss functions}{subsection.2.1.2}% 9
+\BOOKMARK [3][-]{subsubsection.2.1.2.2}{MSE errors}{subsection.2.1.2}% 10
+\BOOKMARK [3][-]{subsubsection.2.1.2.3}{REC curves}{subsection.2.1.2}% 11
+\BOOKMARK [3][-]{subsubsection.2.1.2.4}{RMS error}{subsection.2.1.2}% 12
+\BOOKMARK [1][-]{section.2.2}{Architettura MLP Deep}{chapter.2}% 13
+\BOOKMARK [2][-]{subsection.2.2.1}{Classificazione}{section.2.2}% 14
+\BOOKMARK [3][-]{subsubsection.2.2.1.1}{Accuracy}{subsection.2.2.1}% 15
+\BOOKMARK [3][-]{subsubsection.2.2.1.2}{Matrice di confusione}{subsection.2.2.1}% 16
+\BOOKMARK [3][-]{subsubsection.2.2.1.3}{Score F1 e Score mF1}{subsection.2.2.1}% 17
+\BOOKMARK [2][-]{subsection.2.2.2}{Regressione}{section.2.2}% 18
+\BOOKMARK [3][-]{subsubsection.2.2.2.1}{Loss functions}{subsection.2.2.2}% 19
+\BOOKMARK [3][-]{subsubsection.2.2.2.2}{MSE errors}{subsection.2.2.2}% 20
+\BOOKMARK [3][-]{subsubsection.2.2.2.3}{REC curves}{subsection.2.2.2}% 21
+\BOOKMARK [3][-]{subsubsection.2.2.2.4}{RMS error}{subsection.2.2.2}% 22
+\BOOKMARK [1][-]{section.2.3}{Architettura VGG16 pre-addestrata}{chapter.2}% 23
+\BOOKMARK [1][-]{section.2.4}{VGG16 pre-addestrata: 1\260 approccio}{chapter.2}% 24
+\BOOKMARK [2][-]{subsection.2.4.1}{Classificazione}{section.2.4}% 25
+\BOOKMARK [3][-]{subsubsection.2.4.1.1}{Accuracy}{subsection.2.4.1}% 26
+\BOOKMARK [3][-]{subsubsection.2.4.1.2}{Matrice di confusione}{subsection.2.4.1}% 27
+\BOOKMARK [3][-]{subsubsection.2.4.1.3}{Score F1 e Score mF1}{subsection.2.4.1}% 28
+\BOOKMARK [2][-]{subsection.2.4.2}{Regressione}{section.2.4}% 29
+\BOOKMARK [3][-]{subsubsection.2.4.2.1}{Loss functions}{subsection.2.4.2}% 30
+\BOOKMARK [3][-]{subsubsection.2.4.2.2}{MSE errors}{subsection.2.4.2}% 31
+\BOOKMARK [3][-]{subsubsection.2.4.2.3}{REC curves}{subsection.2.4.2}% 32
+\BOOKMARK [3][-]{subsubsection.2.4.2.4}{RMS error}{subsection.2.4.2}% 33
+\BOOKMARK [1][-]{section.2.5}{VGG16 pre-addestrata: 2\260 approccio}{chapter.2}% 34
+\BOOKMARK [2][-]{subsection.2.5.1}{Classificazione}{section.2.5}% 35
+\BOOKMARK [3][-]{subsubsection.2.5.1.1}{Accuracy}{subsection.2.5.1}% 36
+\BOOKMARK [3][-]{subsubsection.2.5.1.2}{Matrice di confusione}{subsection.2.5.1}% 37
+\BOOKMARK [3][-]{subsubsection.2.5.1.3}{Score F1 e Score mF1}{subsection.2.5.1}% 38
+\BOOKMARK [2][-]{subsection.2.5.2}{Regressione}{section.2.5}% 39
+\BOOKMARK [3][-]{subsubsection.2.5.2.1}{Loss functions}{subsection.2.5.2}% 40
+\BOOKMARK [3][-]{subsubsection.2.5.2.2}{MSE errors}{subsection.2.5.2}% 41
+\BOOKMARK [3][-]{subsubsection.2.5.2.3}{REC curves}{subsection.2.5.2}% 42
+\BOOKMARK [3][-]{subsubsection.2.5.2.4}{RMS error}{subsection.2.5.2}% 43
+\BOOKMARK [0][-]{chapter.3}{Metodo Proposto}{}% 44
+\BOOKMARK [1][-]{section.3.1}{Classificazione}{chapter.3}% 45
+\BOOKMARK [2][-]{subsection.3.1.1}{Accuracy}{section.3.1}% 46
+\BOOKMARK [2][-]{subsection.3.1.2}{Matrice di confusione}{section.3.1}% 47
+\BOOKMARK [2][-]{subsection.3.1.3}{Score F1 e Score mF1}{section.3.1}% 48
+\BOOKMARK [1][-]{section.3.2}{Regressione}{chapter.3}% 49
+\BOOKMARK [2][-]{subsection.3.2.1}{Loss functions}{section.3.2}% 50
+\BOOKMARK [2][-]{subsection.3.2.2}{MSE errors}{section.3.2}% 51
+\BOOKMARK [2][-]{subsection.3.2.3}{REC curves}{section.3.2}% 52
+\BOOKMARK [3][-]{subsubsection.3.2.3.1}{RMS error}{subsection.3.2.3}% 53
+\BOOKMARK [0][-]{chapter.4}{Conclusioni}{}% 54

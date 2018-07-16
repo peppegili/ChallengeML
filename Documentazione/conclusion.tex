@@ -1,0 +1,26 @@
+\chapter{Conclusioni}
+In conclusione, ripercorriamo brevemente gli esperimenti condotti che ci hanno permesso di affrontare, nel migliore dei modi, i problemi di localizzazione basati su classificazione e regressione.
+\\ \\
+Abbiamo iniziato esplorando la neural network più conosciuta, la MLP, ed abbiamo utilizzato questa architettura su entrambi i task. \\
+Dapprima una semplice MLP con un solo livello nascosto, poi con una MLP più profonda con due livelli nascosti. Con entrambe le architetture non abbiamo però ottenuto dei risultati soddisfacenti, ma addirittura ci siamo accorti di una peculiarità: rendendo più complessa l’architettura, aggiungendo più livelli, le performance del modello peggioravano. Questo comportamento indica come l’architettura MLP non riesce a trovare i parametri corretti e non si adatta bene a lavorare su problemi che hanno a che fare con le immagini.
+\\ \\
+Per questo motivo, ci siamo orientati sulle CNN, le quali permettono di applicare le reti neurali in maniera efficiente al processamento di immagini. Esse sostituiscono le trasformazioni lineari con le convoluzioni, che richiedono meno parametri e permettono di conservare le informazioni spaziali. \\
+Come primo passo abbiamo ripreso l’architettura di rete VGG16 pre-addestrata su “ImageNet” ed eseguito tre diversi approcci di fine-tuning sulla rete: con i primi due abbiamo di volta in volta aumentato i blocchi, e quindi il numero di parametri, coinvolti nell’aggiornamento, mantenendo le low level features di VGG16, mentre con l’ultimo approccio abbiamo inoltre optato per l’aggiunta di data augmentation ed una serie di trasformazioni per provare a generalizzare meglio il modello.
+\\ \\
+Ci siamo accorti come i risultati dei primi due approcci sono simili tra loro, ma che, all’aumentare dei livelli “sfreezati”, occorreva meno tempo a raggiungere la convergenza. \\
+L’ultimo approccio invece è risultato essere il migliore, in quanto, con “sfreeze” degli ultimi due blocchi convoluzionali e del blocco fully connected finale insieme alla data augmentation, ci hanno permesso di ottenere i seguenti risultati:
+\begin{itemize}
+	\item[•]In classificazione: {\bf validation accuracy = 0.97 }
+	\item[•]In regressione:
+\end{itemize}
+\begin{center}
+	\begin{tabular}{| l | l | l | l |}
+		\hline
+		Mean Location Error & 0.79 m \\ \hline
+		Median Location Error & 0.65 m \\ \hline
+		Mean Orientation Error & {9.60\textdegree} \\ \hline
+		Median Orientation Error & {6.16\textdegree} \\ \hline							
+	\end{tabular}
+\end{center}
+In conclusione, possiamo ritenerci soddisfatti dei risultati ottenuti per quanto riguarda il task di classificazione. Avremmo potuto effettuare altri esperimenti, provando magari ad impostare un learning rate adattivo che si riducesse all’aumentare del numero delle epoche secondo determinate condizioni, o magari provare altre combinazioni di parametri per affinare i risultati oppure un’altra architettura studiata ad hoc, ma il costo computazionale e il conseguente impatto in termini temporali ci avrebbe impedito di rispettare i termini di scadenza per la consegna del progetto.\\
+Per quanto riguarda invece il task di regressione, possiamo anche qui ritenerci abbastanza soddisfatti dei risultati ottenuti, anche se con un pò di rammarico nel non aver magari provato ad integrare, assieme alla CNN, una LSTM che avrebbe sfruttato le dipendenze e la natura sequenziale dei dati in input facilitando magari le performance dell’apprendimento e quindi la qualità dei risultati ottenuti.
